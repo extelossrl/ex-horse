@@ -1,0 +1,38 @@
+{
+  "name": "ex-horse",
+  "version": "0.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "eslint src",
+    "start": "node src/index.js",
+    "docs:dev": "vuepress dev docs",
+    "docs:build": "vuepress build docs"
+  },
+  "keywords": [],
+  "author": "ExTelos S.R.L.",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^5.13.0",
+    "eslint-config-prettier": "^4.0.0",
+    "eslint-config-standard": "^12.0.0",
+    "eslint-plugin-import": "^2.16.0",
+    "eslint-plugin-node": "^8.0.1",
+    "eslint-plugin-prettier": "^3.0.1",
+    "eslint-plugin-promise": "^4.0.1",
+    "eslint-plugin-standard": "^4.0.0",
+    "prettier": "^1.16.4",
+    "vuepress": "^0.14.8"
+  },
+  "dependencies": {
+    "@casl/ability": "^3.0.0",
+    "apollo-server": "^2.3.3",
+    "bcrypt": "^3.0.3",
+    "clean-deep": "^3.0.2",
+    "graphql": "^14.1.1",
+    "graphql-tools-types": "^1.2.1",
+    "jsonwebtoken": "^8.4.0",
+    "mongodb": "^3.1.13",
+    "sift": "^7.0.1"
+  }
+}
