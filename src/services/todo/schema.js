@@ -1,7 +1,4 @@
 const { gql } = require("apollo-server");
-const crudSchema = require("../../libraries/crud/schema");
-
-const { typeDefsCRUD, resolversCRUD } = crudSchema("Todo");
 
 const typeDefs = gql`
   input TodoInput {
@@ -11,22 +8,24 @@ const typeDefs = gql`
   }
 
   type Todo {
-    id: ID!
+    _id: ID!
     title: String!
     description: String
     isDone: Boolean!
   }
 
-  ${typeDefsCRUD}
+  extend type Commands {
+    TodoCreate: Todo! @Create(service: "Todo", input: "TodoInput")
+  }
+
+  extend type Queries {
+    TodoFind: [Todo!]! @Find(service: "Todo")
+  }
 `;
 
 const resolvers = {
-  Commands: {
-    ...resolversCRUD.Commands
-  },
-  Queries: {
-    ...resolversCRUD.Queries
-  }
+  Commands: {},
+  Queries: {}
 };
 
 module.exports = { typeDefs, resolvers };

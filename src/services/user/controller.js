@@ -1,4 +1,4 @@
-const EventStoreCRUD = require("../../libraries/crud/controller");
+const EventStore = require("../../libraries/eventstore");
 const { AuthenticationError, UserInputError } = require("apollo-server");
 const {
   hashPassword,
@@ -6,13 +6,13 @@ const {
   generateJWT
 } = require("../../libraries/authentication");
 
-class EventStoreController extends EventStoreCRUD {
+class ServiceController extends EventStore {
   $CREATE(stateCache, { payload, aggregateId }) {
     if (stateCache.find(user => user.username === payload.username)) {
       return stateCache;
     }
 
-    return [...stateCache, { ...payload, id: aggregateId }];
+    return [...stateCache, { ...payload, _id: aggregateId }];
   }
 
   async signUp(username, password) {
@@ -21,7 +21,7 @@ class EventStoreController extends EventStoreCRUD {
 
     const user = await super.create({ username, password: psw, role });
 
-    if (!user) {
+    if (user instanceof UserInputError) {
       throw new UserInputError(`User ${username} already exists.`);
     }
 
@@ -45,4 +45,4 @@ class EventStoreController extends EventStoreCRUD {
   }
 }
 
-module.exports = EventStoreController;
+module.exports = ServiceController;

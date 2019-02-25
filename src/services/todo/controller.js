@@ -1,5 +1,5 @@
-const EventStoreCRUD = require("../../libraries/crud/controller");
+const EventStore = require("../../libraries/eventstore");
 
-class EventStoreController extends EventStoreCRUD {}
+class ServiceController extends EventStore {}
 
-module.exports = EventStoreController;
+module.exports = ServiceController;

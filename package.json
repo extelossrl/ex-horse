@@ -21,8 +21,7 @@
     "eslint-plugin-prettier": "^3.0.1",
     "eslint-plugin-promise": "^4.0.1",
     "eslint-plugin-standard": "^4.0.0",
-    "prettier": "^1.16.4",
-    "vuepress": "^0.14.8"
+    "prettier": "^1.16.4"
   },
   "dependencies": {
     "@casl/ability": "^3.0.0",
@@ -33,6 +32,7 @@
     "graphql-tools-types": "^1.2.1",
     "jsonwebtoken": "^8.4.0",
     "mongodb": "^3.1.13",
+    "require-glob": "^3.2.0",
     "sift": "^7.0.1"
   }
 }
