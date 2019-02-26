@@ -1,8 +1,8 @@
 const { DataSource } = require("apollo-datasource");
 const { UserInputError } = require("apollo-server");
 const { ObjectID } = require("mongodb");
+const { mergeWith, isArray } = require("lodash");
 const sift = require("sift").default;
-const cleanDeep = require("clean-deep");
 const config = require("../config");
 
 /**
@@ -118,14 +118,17 @@ class EventStore extends DataSource {
   $PATCH(stateCache, { aggregateId, payload }) {
     const target = stateCache.findIndex(entry => entry._id.equals(aggregateId));
 
-    stateCache[target] = {
-      ...stateCache[target],
-      ...cleanDeep(payload, {
-        emptyArrays: false,
-        emptyObjects: false,
-        emptyStrings: false
-      })
-    };
+    mergeWith(stateCache[target], payload, (objValue, srcValue) => {
+      if (isArray(objValue)) {
+        return objValue.concat(srcValue);
+      }
+
+      if (srcValue === null) {
+        return objValue;
+      }
+
+      return undefined;
+    });
 
     return stateCache;
   }
