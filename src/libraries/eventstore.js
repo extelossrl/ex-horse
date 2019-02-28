@@ -52,21 +52,36 @@ class EventStore extends DataSource {
    *
    * @param {Array} stateCache Accumulator array containing the state of the aggregate
    * @param {Event} event Current event that needs to be resolved
+   * @param {Event} a Not used right now
+   * @param {Event} b Not used right now
+   * @param {String} model Name of the read model
    * @returns {Object} A Object containing the resolved event
    * @memberof EventStoreCRUD
    */
-  hydrate(stateCache, event) {
+  hydrate(stateCache, event, a, b, model) {
     let toRet = stateCache;
 
     switch (event.type) {
       case "CREATE":
-        toRet = this.$CREATE(toRet, event);
+        try {
+          toRet = this[`$${model}`].$CREATE(toRet, event);
+        } catch (error) {
+          toRet = this.$CREATE(toRet, event);
+        }
         break;
       case "UPDATE":
-        toRet = this.$UPDATE(toRet, event);
+        try {
+          toRet = this[`$${model}`].$UPDATE(toRet, event);
+        } catch (error) {
+          toRet = this.$UPDATE(toRet, event);
+        }
         break;
       case "PATCH":
-        toRet = this.$PATCH(toRet, event);
+        try {
+          toRet = this[`$${model}`].$PATCH(toRet, event);
+        } catch (error) {
+          toRet = this.$PATCH(toRet, event);
+        }
         break;
       case "DELETE":
         toRet = this.$DELETE(toRet, event);
@@ -262,14 +277,14 @@ class EventStore extends DataSource {
    * Find an entry on the state using MongoDB like queries
    *
    * @param {Object} [params={}] { query: {} } Query object, MongoDB like queries can be used to filter data
+   * @param {String} model Name of the read model
    * @returns {Promise} A Promise that return all the data of the Aggregate Name
    * @memberof EventStoreCRUD
    */
-  async find(params = {}) {
+  async find(params = {}, model) {
     params.query = params.query || {};
 
-    const state = await this.state();
-
+    const state = await this.state(model);
     return state.filter(sift({ ...params.query }));
   }
 
@@ -278,11 +293,15 @@ class EventStore extends DataSource {
    *
    * @param {ObjectID} id The ID of the entry
    * @param {*} [params] Not used right now
+   * @param {String} model Name of the read model
    * @returns {Promise} A Promise that returns an Object entry if resolved
    * @memberof EventStoreCRUD
    */
-  async get(id, params) {
-    const entries = await this.find(id ? { query: { _id: id } } : params);
+  async get(id, params, model) {
+    const entries = await this.find(
+      id ? { query: { _id: id } } : params,
+      model
+    );
     const entry = entries[0];
 
     if (!entry) {
@@ -317,53 +336,73 @@ class EventStore extends DataSource {
   /**
    * Rebuild the state relative to the current Aggregate Name and an optional Aggregate ID
    *
-   * @param {ObjectID} [aggregateId] Aggregate ID filter
+   * @param {String} model Name of the read model
    * @returns {Promise} A promise that returns an Array containing the state relative to the current Aggregate Name if resolved
    * @memberof EventStore
    */
-  async state(aggregateId) {
-    const snapshot = (await this.db
-      .collection(this.collections.snapshots)
-      .findOne(
-        { aggregateName: this.aggregateName },
-        { sort: [["timestamp", -1]] }
-      )) || {
-      aggregateName: this.aggregateName,
-      eventIds: [],
-      state: [],
-      timestamp: new Date(0)
-    };
+  async state(model) {
+    const snapshot = await this.loadSnapshot(model);
 
     const events = await this.db
       .collection(this.collections.events)
       .find({
         aggregateName: this.aggregateName,
-        aggregateId: aggregateId || { $exists: true },
         _id: { $nin: snapshot.eventIds }
       })
       .sort({ timestamp: 1 })
       .toArray();
 
     const state = events.reduce(
-      (...args) => this.hydrate(...args),
+      (...args) => this.hydrate(...args, model),
       snapshot.state
     );
 
+    await this.saveSnapshot(events, snapshot, state, model);
+
+    return state;
+  }
+
+  /**
+   * Loads a snapshot of a previous state
+   *
+   * @param {String} model Name of the read model
+   * @returns {Promise} A promise that returns a snapshot of a previous state
+   * @memberof EventStore
+   */
+  async loadSnapshot(model) {
+    return (
+      (await this.db
+        .collection(`${this.collections.snapshots}-${model}`)
+        .findOne({}, { sort: [["timestamp", -1]] })) || {
+        eventIds: [],
+        state: [],
+        timestamp: new Date(0)
+      }
+    );
+  }
+
+  /**
+   * Saves a snapshot of the current state
+   *
+   * @param {Array} model Array of events processed by the hydrate function
+   * @param {Object} model Previous snapshot, used to check if is we need to create a new snapshot
+   * @param {Array} model Array represting the crrent state
+   * @param {String} model Name of the read model
+   * @memberof EventStore
+   */
+  async saveSnapshot(events, snapshot, state, model) {
     const currentTimestamp = new Date();
 
     if (
       currentTimestamp.getTime() - snapshot.timestamp.getTime() >
       config.SNAPSHOT_INTERVAL
     ) {
-      this.db.collection(this.collections.snapshots).insertOne({
-        aggregateName: this.aggregateName,
+      this.db.collection(`${this.collections.snapshots}-${model}`).insertOne({
         eventIds: [...snapshot.eventIds, ...events.map(event => event._id)],
         state,
         timestamp: currentTimestamp
       });
     }
-
-    return state;
   }
 }
 

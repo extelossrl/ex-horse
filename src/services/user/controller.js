@@ -17,7 +17,7 @@ class ServiceController extends EventStore {
 
   async signUp(username, password) {
     const psw = await hashPassword(password);
-    const role = "RESOURCE";
+    const role = "MEMBER";
 
     const user = await super.create({ username, password: psw, role });
 
@@ -30,7 +30,7 @@ class ServiceController extends EventStore {
 
   async signIn(username, password) {
     const psw = await hashPassword(password);
-    const user = await this.get(null, { query: { username } }).catch(e => e);
+    const user = await this.get(null, { query: { username } }, "User").catch(e => e);
 
     await super.commit("LOGIN", user ? user.id : null, {
       username,

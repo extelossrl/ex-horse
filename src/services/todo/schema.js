@@ -19,7 +19,7 @@ const typeDefs = gql`
   }
 
   extend type Queries {
-    TodoFind: [Todo!]! @Find(service: "Todo")
+    TodoFind: [Todo!]! @Find(service: "Todo", model: "Todo")
   }
 `;
 

@@ -1,10 +1,23 @@
 const { gql } = require("apollo-server");
 
 const typeDefs = gql`
+  enum UserRole {
+    ADMIN
+    MEMBER
+    GUEST
+  }
+
+  input UserInput {
+    username: String
+    password: String
+    role: UserRole
+  }
+
   type User {
     id: ID!
     username: String!
     password: String!
+    role: UserRole!
   }
 
   extend type Commands {

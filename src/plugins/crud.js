@@ -68,11 +68,12 @@ class Remove extends SchemaDirectiveVisitor {
 class Find extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
     const service = this.args.service;
+    const model = this.args.model;
 
     field.args.push({ name: "params", type: this.schema.getType("JSON") });
 
     field.resolve = (parent, { params }, context, info) => {
-      return context.dataSources[service].find(params);
+      return context.dataSources[service].find(params, model);
     };
   }
 }
@@ -80,6 +81,7 @@ class Find extends SchemaDirectiveVisitor {
 class Get extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
     const service = this.args.service;
+    const model = this.args.model;
 
     field.args.push(
       { name: "id", type: this.schema.getType("ID") },
@@ -87,7 +89,7 @@ class Get extends SchemaDirectiveVisitor {
     );
 
     field.resolve = (parent, { id, params }, context, info) => {
-      return context.dataSources[service].get(id, params);
+      return context.dataSources[service].get(id, params, model);
     };
   }
 }
@@ -107,8 +109,8 @@ module.exports = ({ typeDefs, schemaDirectives }) => {
       input: String = "JSON"
     ) on FIELD_DEFINITION
     directive @Remove(service: String!) on FIELD_DEFINITION
-    directive @Find(service: String!) on FIELD_DEFINITION
-    directive @Get(service: String!) on FIELD_DEFINITION
+    directive @Find(service: String!, model: String) on FIELD_DEFINITION
+    directive @Get(service: String!, model: String) on FIELD_DEFINITION
   `);
 
   schemaDirectives.Create = Create;
