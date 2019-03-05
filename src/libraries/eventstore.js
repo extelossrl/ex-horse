@@ -384,9 +384,9 @@ class EventStore extends DataSource {
   /**
    * Saves a snapshot of the current state
    *
-   * @param {Array} model Array of events processed by the hydrate function
-   * @param {Object} model Previous snapshot, used to check if is we need to create a new snapshot
-   * @param {Array} model Array represting the crrent state
+   * @param {Array} events Array of events processed by the hydrate function
+   * @param {Object} snapshot Previous snapshot, used to check if is we need to create a new snapshot
+   * @param {Array} state Array represting the crrent state
    * @param {String} model Name of the read model
    * @memberof EventStore
    */

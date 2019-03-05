@@ -6,7 +6,7 @@ const abilities = {
   ADMIN: AbilityBuilder.define(can => {
     can("manage", "all");
   }),
-  RESOURCE: AbilityBuilder.define(can => {
+  MEMBER: AbilityBuilder.define(can => {
     can("read", "all");
   }),
   GUEST: AbilityBuilder.define(can => {
