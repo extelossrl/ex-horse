@@ -1,4 +1,4 @@
-const { gql } = require("apollo-server");
+const { gql } = require("apollo-server")
 
 module.exports = ({ typeDefs }) => {
   typeDefs.push(gql`
@@ -19,5 +19,5 @@ module.exports = ({ typeDefs }) => {
       query: Queries
       subscription: Subscriptions
     }
-  `);
-};
+  `)
+}

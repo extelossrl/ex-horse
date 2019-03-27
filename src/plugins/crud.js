@@ -1,94 +1,94 @@
-const { gql, SchemaDirectiveVisitor } = require("apollo-server");
+const { gql, SchemaDirectiveVisitor } = require("apollo-server")
 
 class Create extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
-    const service = this.args.service;
-    const input = this.args.input;
+    const service = this.args.service
+    const input = this.args.input
 
     field.args.push(
       { name: "data", type: this.schema.getType(input) },
       { name: "params", type: this.schema.getType("JSON") }
-    );
+    )
 
     field.resolve = async (parent, { data, params }, context, info) => {
-      return context.dataSources[service].create(data, params);
-    };
+      return context.dataSources[service].create(data, params)
+    }
   }
 }
 
 class Update extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
-    const service = this.args.service;
-    const input = this.args.input;
+    const service = this.args.service
+    const input = this.args.input
 
     field.args.push(
       { name: "id", type: this.schema.getType("ID") },
       { name: "data", type: this.schema.getType(input) },
       { name: "params", type: this.schema.getType("JSON") }
-    );
+    )
 
     field.resolve = (parent, { id, data, params }, context, info) => {
-      return context.dataSources[service].update(id, data, params);
-    };
+      return context.dataSources[service].update(id, data, params)
+    }
   }
 }
 
 class Patch extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
-    const service = this.args.service;
-    const input = this.args.input;
+    const service = this.args.service
+    const input = this.args.input
 
     field.args.push(
       { name: "id", type: this.schema.getType("ID") },
       { name: "data", type: this.schema.getType(input) },
       { name: "params", type: this.schema.getType("JSON") }
-    );
+    )
 
     field.resolve = (parent, { id, data, params }, context, info) => {
-      return context.dataSources[service].patch(id, data, params);
-    };
+      return context.dataSources[service].patch(id, data, params)
+    }
   }
 }
 
 class Remove extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
-    const service = this.args.service;
+    const service = this.args.service
 
     field.args.push(
       { name: "id", type: this.schema.getType("ID") },
       { name: "params", type: this.schema.getType("JSON") }
-    );
+    )
 
     field.resolve = (parent, { id, params }, context, info) => {
-      return context.dataSources[service].remove(id, params);
-    };
+      return context.dataSources[service].remove(id, params)
+    }
   }
 }
 
 class Find extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
-    const service = this.args.service;
+    const service = this.args.service
 
-    field.args.push({ name: "params", type: this.schema.getType("JSON") });
+    field.args.push({ name: "params", type: this.schema.getType("JSON") })
 
     field.resolve = (parent, { params }, context, info) => {
-      return context.dataSources[service].find(params);
-    };
+      return context.dataSources[service].find(params)
+    }
   }
 }
 
 class Get extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
-    const service = this.args.service;
+    const service = this.args.service
 
     field.args.push(
       { name: "id", type: this.schema.getType("ID") },
       { name: "params", type: this.schema.getType("JSON") }
-    );
+    )
 
     field.resolve = (parent, { id, params }, context, info) => {
-      return context.dataSources[service].get(id, params);
-    };
+      return context.dataSources[service].get(id, params)
+    }
   }
 }
 
@@ -116,12 +116,12 @@ module.exports = ({ typeDefs, schemaDirectives }) => {
       cursor: ID!
       data: JSON!
     }
-  `);
+  `)
 
-  schemaDirectives.Create = Create;
-  schemaDirectives.Update = Update;
-  schemaDirectives.Patch = Patch;
-  schemaDirectives.Remove = Remove;
-  schemaDirectives.Find = Find;
-  schemaDirectives.Get = Get;
-};
+  schemaDirectives.Create = Create
+  schemaDirectives.Update = Update
+  schemaDirectives.Patch = Patch
+  schemaDirectives.Remove = Remove
+  schemaDirectives.Find = Find
+  schemaDirectives.Get = Get
+}

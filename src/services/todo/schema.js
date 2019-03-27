@@ -1,4 +1,4 @@
-const { gql } = require("apollo-server");
+const { gql } = require("apollo-server")
 
 const typeDefs = gql`
   input TodoInput {
@@ -24,11 +24,11 @@ const typeDefs = gql`
   extend type Queries {
     TodoFind: Page @Find(service: "Todo")
   }
-`;
+`
 
 const resolvers = {
   Commands: {},
   Queries: {}
-};
+}
 
-module.exports = { typeDefs, resolvers };
+module.exports = { typeDefs, resolvers }

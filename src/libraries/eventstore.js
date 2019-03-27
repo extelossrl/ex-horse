@@ -1,8 +1,8 @@
-const { DataSource } = require("apollo-datasource");
-const { UserInputError } = require("apollo-server");
-const { ObjectID } = require("mongodb");
-const { mergeWith, isArray } = require("lodash");
-const { COLLECTIONS, SNAPSHOT_TRIGGER } = require("../config");
+const { DataSource } = require("apollo-datasource")
+const { UserInputError } = require("apollo-server")
+const { ObjectID } = require("mongodb")
+const { mergeWith, isArray } = require("lodash")
+const { COLLECTIONS, SNAPSHOT_TRIGGER } = require("../config")
 
 /**
  * Represent an Event Store for managing Event Sourcing in a MongoDB database
@@ -19,10 +19,10 @@ class EventStore extends DataSource {
    * @memberof EventStore
    */
   constructor(db, collection) {
-    super();
+    super()
 
-    this.db = db;
-    this.aggregateName = collection.toUpperCase();
+    this.db = db
+    this.aggregateName = collection.toUpperCase()
   }
 
   /**
@@ -32,7 +32,7 @@ class EventStore extends DataSource {
    * @memberof EventStore
    */
   initialize(config) {
-    this.context = config.context;
+    this.context = config.context
   }
 
   /**
@@ -44,7 +44,7 @@ class EventStore extends DataSource {
    * @memberof EventStoreCRUD
    */
   $CREATE(data, { aggregateId, payload }) {
-    return [...data, { ...payload, _id: aggregateId, _removed: false }];
+    return [...data, { ...payload, _id: aggregateId, _removed: false }]
   }
 
   /**
@@ -56,11 +56,11 @@ class EventStore extends DataSource {
    * @memberof EventStoreCRUD
    */
   $UPDATE(data, { aggregateId, payload }) {
-    const target = data.findIndex(entry => entry._id.equals(aggregateId));
+    const target = data.findIndex((entry) => entry._id.equals(aggregateId))
 
-    data[target] = payload;
+    data[target] = payload
 
-    return data;
+    return data
   }
 
   /**
@@ -72,21 +72,21 @@ class EventStore extends DataSource {
    * @memberof EventStoreCRUD
    */
   $PATCH(data, { aggregateId, payload }) {
-    const target = data.findIndex(entry => entry._id.equals(aggregateId));
+    const target = data.findIndex((entry) => entry._id.equals(aggregateId))
 
     mergeWith(data[target], payload, (objValue, srcValue) => {
       if (isArray(objValue)) {
-        return objValue.concat(srcValue);
+        return objValue.concat(srcValue)
       }
 
       if (srcValue === null) {
-        return objValue;
+        return objValue
       }
 
-      return undefined;
-    });
+      return undefined
+    })
 
-    return data;
+    return data
   }
 
   /**
@@ -98,11 +98,11 @@ class EventStore extends DataSource {
    * @memberof EventStoreCRUD
    */
   $REMOVE(data, { aggregateId }) {
-    const target = data.findIndex(entry => entry._id.equals(aggregateId));
+    const target = data.findIndex((entry) => entry._id.equals(aggregateId))
 
-    data[target]._removed = true;
+    data[target]._removed = true
 
-    return data;
+    return data
   }
 
   /**
@@ -114,15 +114,15 @@ class EventStore extends DataSource {
    * @memberof EventStoreCRUD
    */
   $DEFAULT(data, event) {
-    const { type } = event;
+    const { type } = event
 
     if (this[`$${type}`]) {
-      data = this[`$${type}`](data, event);
+      data = this[`$${type}`](data, event)
     } else {
-      console.warn(`⚠  Unhandled event ${this.aggregateName}@${type}`);
+      console.warn(`⚠  Unhandled event ${this.aggregateName}@${type}`)
     }
 
-    return data;
+    return data
   }
 
   /**
@@ -134,12 +134,12 @@ class EventStore extends DataSource {
    * @memberof EventStoreCRUD
    */
   async create(data, params) {
-    const id = new ObjectID();
+    const id = new ObjectID()
 
-    await this.commit("CREATE", id, data);
-    const entry = await this.get(id).catch(e => e);
+    await this.commit("CREATE", id, data)
+    const entry = await this.get(id).catch((e) => e)
 
-    return entry;
+    return entry
   }
 
   /**
@@ -152,10 +152,10 @@ class EventStore extends DataSource {
    * @memberof EventStoreCRUD
    */
   async update(id, data, params) {
-    await this.commit("UPDATE", id, data);
-    const entry = await this.get(id);
+    await this.commit("UPDATE", id, data)
+    const entry = await this.get(id)
 
-    return entry;
+    return entry
   }
 
   /**
@@ -168,10 +168,10 @@ class EventStore extends DataSource {
    * @memberof EventStoreCRUD
    */
   async patch(id, data, params) {
-    await this.commit("PATCH", id, data);
-    const entry = await this.get(id);
+    await this.commit("PATCH", id, data)
+    const entry = await this.get(id)
 
-    return entry;
+    return entry
   }
 
   /**
@@ -183,10 +183,10 @@ class EventStore extends DataSource {
    * @memberof EventStoreCRUD
    */
   async remove(id, params) {
-    const entry = await this.get(id).catch(e => e);
-    await this.commit("REMOVE", id);
+    const entry = await this.get(id).catch((e) => e)
+    await this.commit("REMOVE", id)
 
-    return entry;
+    return entry
   }
 
   /**
@@ -197,15 +197,15 @@ class EventStore extends DataSource {
    * @memberof EventStoreCRUD
    */
   async find(params = {}) {
-    params.query = params.query || {};
-    params.pagination = params.pagination || {};
-    params.pagination.cursor = params.pagination.cursor || "";
-    params.pagination.limit = params.pagination.limit || 30;
+    params.query = params.query || {}
+    params.pagination = params.pagination || {}
+    params.pagination.cursor = params.pagination.cursor || ""
+    params.pagination.limit = params.pagination.limit || 30
 
-    params.query._removed = false;
+    params.query._removed = false
 
-    const snapshot = await this.buildSnapshot(params);
-    const data = snapshot.data.filter(entry => !entry._removed);
+    const snapshot = await this.buildSnapshot(params)
+    const data = snapshot.data.filter((entry) => !entry._removed)
     const total = snapshot.data.length - (snapshot.data.length - data.length)
 
     return {
@@ -213,7 +213,7 @@ class EventStore extends DataSource {
       limit: params.pagination.limit,
       cursor: (snapshot.data.slice(-1).pop() || {})._id || "",
       data
-    };
+    }
   }
 
   /**
@@ -227,16 +227,16 @@ class EventStore extends DataSource {
   async get(id, params) {
     const page = await this.find(
       id ? { query: { _id: new ObjectID(id) } } : params
-    );
-    const entry = page.data[0];
+    )
+    const entry = page.data[0]
 
     if (!entry) {
       throw new UserInputError(
-        `Entry with ID ${id} was not found in the ${this.aggregateName.toLowerCase()}s collection.`
-      );
+        `Entry with ID ${id} was not found in the ${this.aggregateName.toLowerCase()} collection.`
+      )
     }
 
-    return entry;
+    return entry
   }
 
   /**
@@ -256,7 +256,7 @@ class EventStore extends DataSource {
       payload,
       user: this.context.user,
       timestamp: new Date()
-    });
+    })
   }
 
   /**
@@ -266,54 +266,54 @@ class EventStore extends DataSource {
    * @memberof EventStore
    */
   async buildSnapshot(params) {
-    const snapshot = await this.loadSnapshot(params);
+    const snapshot = await this.loadSnapshot(params)
 
     const events = await this.db
       .collection(COLLECTIONS.EVENTS)
       .find({
         aggregateName: this.aggregateName,
-        aggregateId: { $in: snapshot.data.map(entry => entry._id) },
+        aggregateId: { $in: snapshot.data.map((entry) => entry._id) },
         _id: snapshot.lastEventId
           ? { $gt: snapshot.lastEventId }
           : { $exists: true }
       })
       .sort({ timestamp: 1 })
-      .toArray();
+      .toArray()
 
     const data = events.reduce((data, event) => {
       switch (event.type) {
         case "CREATE":
-          data = this.$CREATE(data, event);
-          break;
+          data = this.$CREATE(data, event)
+          break
         case "UPDATE":
-          data = this.$UPDATE(data, event);
-          break;
+          data = this.$UPDATE(data, event)
+          break
         case "PATCH":
-          data = this.$PATCH(data, event);
-          break;
+          data = this.$PATCH(data, event)
+          break
         case "REMOVE":
-          data = this.$REMOVE(data, event);
-          break;
+          data = this.$REMOVE(data, event)
+          break
         default:
-          data = this.$DEFAULT(data, event);
-          break;
+          data = this.$DEFAULT(data, event)
+          break
       }
 
-      return data;
-    }, snapshot.data);
+      return data
+    }, snapshot.data)
 
     const latest = {
       lastEventId: (events.slice(-1).pop() || {})._id || snapshot.lastEventId,
       data,
       timestamp: new Date(),
       total: data.length
-    };
-
-    if (events.length > SNAPSHOT_TRIGGER) {
-      this.saveSnapshot(latest);
     }
 
-    return latest;
+    if (events.length > SNAPSHOT_TRIGGER) {
+      this.saveSnapshot(latest)
+    }
+
+    return latest
   }
 
   /**
@@ -328,28 +328,28 @@ class EventStore extends DataSource {
       data: [],
       timestamp: new Date(0),
       total: 0
-    };
+    }
 
     try {
       const meta = await this.db
         .collection(COLLECTIONS.META)
-        .findOne({ key: "snapshot" });
+        .findOne({ key: "snapshot" })
       const data = await this.db
         .collection(COLLECTIONS.SNAPSHOT)
         .find(params.query)
         .limit(params.pagination.limit)
-        .toArray();
+        .toArray()
       const total = await this.db
         .collection(COLLECTIONS.SNAPSHOT)
-        .countDocuments(params.query);
+        .countDocuments(params.query)
 
-      snapshot.lastEventId = meta.lastEventId;
-      snapshot.data = data;
-      snapshot.timestamp = meta.timestamp;
-      snapshot.total = total;
+      snapshot.lastEventId = meta.lastEventId
+      snapshot.data = data
+      snapshot.timestamp = meta.timestamp
+      snapshot.total = total
     } catch (error) {}
 
-    return snapshot;
+    return snapshot
   }
 
   /**
@@ -361,14 +361,14 @@ class EventStore extends DataSource {
    */
   async saveSnapshot(snapshot) {
     await this.db.collection(COLLECTIONS.SNAPSHOT).bulkWrite(
-      snapshot.data.map(entry => ({
+      snapshot.data.map((entry) => ({
         replaceOne: {
           filter: { _id: entry._id },
           replacement: entry,
           upsert: true
         }
       }))
-    );
+    )
     await this.db.collection(COLLECTIONS.META).replaceOne(
       { key: "snapshot" },
       {
@@ -377,8 +377,8 @@ class EventStore extends DataSource {
         lastEventId: snapshot.lastEventId
       },
       { upsert: true }
-    );
+    )
   }
 }
 
-module.exports = EventStore;
+module.exports = EventStore

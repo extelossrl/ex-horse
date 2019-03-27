@@ -9,4 +9,4 @@ module.exports = {
   },
   JWT_SECRET: "acqua-in-bocca",
   SNAPSHOT_TRIGGER: 0
-};
+}

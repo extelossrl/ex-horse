@@ -1,4 +1,4 @@
-const { gql } = require("apollo-server");
+const { gql } = require("apollo-server")
 
 const typeDefs = gql`
   enum UserRole {
@@ -24,18 +24,18 @@ const typeDefs = gql`
     UserSignUp(username: String!, password: String!): String!
     UserSignIn(username: String!, password: String!): String!
   }
-`;
+`
 
 const resolvers = {
   Commands: {
     UserSignUp: async (obj, { username, password }, context, info) => {
-      return context.dataSources.User.signUp(username, password);
+      return context.dataSources.User.signUp(username, password)
     },
     UserSignIn: async (obj, { username, password }, context, info) => {
-      return context.dataSources.User.signIn(username, password);
+      return context.dataSources.User.signIn(username, password)
     }
   },
   Queries: {}
-};
+}
 
-module.exports = { typeDefs, resolvers };
+module.exports = { typeDefs, resolvers }

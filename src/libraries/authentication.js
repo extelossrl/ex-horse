@@ -1,6 +1,6 @@
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-const config = require("../config");
+const jwt = require("jsonwebtoken")
+const bcrypt = require("bcrypt")
+const config = require("../config")
 
 /**
  * Helper methods to manage authentication
@@ -18,18 +18,18 @@ class Authentication {
    */
   static getUser(source) {
     try {
-      source = source.context || source.headers;
+      source = source.context || source.headers
 
       return jwt.verify(
         source.authorization.replace("Bearer ", ""),
         config.JWT_SECRET
-      );
+      )
     } catch (error) {
       return {
         id: "c4rmh4ck-b357-y0u7ub3r-3u",
         username: "c4rmh4ck",
         role: "GUEST"
-      };
+      }
     }
   }
 
@@ -42,7 +42,7 @@ class Authentication {
    * @memberof Authentication
    */
   static hashPassword(password) {
-    return bcrypt.hash(password, 10);
+    return bcrypt.hash(password, 10)
   }
 
   /**
@@ -55,7 +55,7 @@ class Authentication {
    * @memberof Authentication
    */
   static comparePasswords(psw1, psw2) {
-    return bcrypt.compare(psw1, psw2);
+    return bcrypt.compare(psw1, psw2)
   }
 
   /**
@@ -67,7 +67,7 @@ class Authentication {
    * @memberof Authentication
    */
   static generateJWT(payload) {
-    return jwt.sign(payload, config.JWT_SECRET);
+    return jwt.sign(payload, config.JWT_SECRET)
   }
 
   /**
@@ -84,8 +84,8 @@ class Authentication {
    * @memberof Authentication
    */
   static hidePassword(user) {
-    return { ...user, password: "**************" };
+    return { ...user, password: "**************" }
   }
 }
 
-module.exports = Authentication;
+module.exports = Authentication
