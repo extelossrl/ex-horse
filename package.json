@@ -6,6 +6,7 @@
   "scripts": {
     "test": "eslint src",
     "start": "node src/index.js",
+    "debug": "node --inspect src/index.js",
     "docs:dev": "vuepress dev docs",
     "docs:build": "vuepress build docs"
   },

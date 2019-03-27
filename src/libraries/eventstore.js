@@ -2,8 +2,7 @@ const { DataSource } = require("apollo-datasource");
 const { UserInputError } = require("apollo-server");
 const { ObjectID } = require("mongodb");
 const { mergeWith, isArray } = require("lodash");
-const sift = require("sift").default;
-const config = require("../config");
+const { COLLECTIONS, SNAPSHOT_TRIGGER } = require("../config");
 
 /**
  * Represent an Event Store for managing Event Sourcing in a MongoDB database
@@ -24,8 +23,6 @@ class EventStore extends DataSource {
 
     this.db = db;
     this.aggregateName = collection.toUpperCase();
-
-    this.collections = config.EVENTSTORE_COLLECTIONS;
   }
 
   /**
@@ -39,101 +36,45 @@ class EventStore extends DataSource {
   }
 
   /**
-   * Method that gets called when rebuilding the state of the aggregate for resolving each event
-   *
-   * @typedef {Object} Event
-   * @property {ObjectID} id ID of the event
-   * @property {String} type Type of the event
-   * @property {String} aggregateName Name of the aggregate
-   * @property {ObjectID} aggregateId ID of the aggregate
-   * @property {Object} payload Payload of the event
-   * @property {User} user User who triggered the event
-   * @property {String} timestamp Timestamp of the event
-   *
-   * @param {Array} stateCache Accumulator array containing the state of the aggregate
-   * @param {Event} event Current event that needs to be resolved
-   * @param {Event} a Not used right now
-   * @param {Event} b Not used right now
-   * @param {String} model Name of the read model
-   * @returns {Object} A Object containing the resolved event
-   * @memberof EventStoreCRUD
-   */
-  hydrate(stateCache, event, a, b, model) {
-    let toRet = stateCache;
-
-    switch (event.type) {
-      case "CREATE":
-        try {
-          toRet = this[`$${model}`].$CREATE(toRet, event);
-        } catch (error) {
-          toRet = this.$CREATE(toRet, event);
-        }
-        break;
-      case "UPDATE":
-        try {
-          toRet = this[`$${model}`].$UPDATE(toRet, event);
-        } catch (error) {
-          toRet = this.$UPDATE(toRet, event);
-        }
-        break;
-      case "PATCH":
-        try {
-          toRet = this[`$${model}`].$PATCH(toRet, event);
-        } catch (error) {
-          toRet = this.$PATCH(toRet, event);
-        }
-        break;
-      case "DELETE":
-        toRet = this.$DELETE(toRet, event);
-        break;
-      default:
-        toRet = this.$DEFAULT(toRet, event);
-        break;
-    }
-
-    return toRet;
-  }
-
-  /**
    * Method that resolves the CREATE event
    *
-   * @param {Array} stateCache Accumulator array containing the state of the aggregate
+   * @param {Array} data Accumulator array containing the data of the aggregate
    * @param {Event} event Event object containing information needed to resolve the event
    * @returns {Array} An accumulator array with a new entry
    * @memberof EventStoreCRUD
    */
-  $CREATE(stateCache, { aggregateId, payload }) {
-    return [...stateCache, { ...payload, _id: aggregateId }];
+  $CREATE(data, { aggregateId, payload }) {
+    return [...data, { ...payload, _id: aggregateId, _removed: false }];
   }
 
   /**
    * Method that resolves the UPDATE event
    *
-   * @param {Array} stateCache Accumulator array containing the state of the aggregate
+   * @param {Array} data Accumulator array containing the data of the aggregate
    * @param {Event} event Event object containing information needed to resolve the event
    * @returns {Array} An accumulator array with a replaced entry
    * @memberof EventStoreCRUD
    */
-  $UPDATE(stateCache, { aggregateId, payload }) {
-    const target = stateCache.findIndex(entry => entry._id.equals(aggregateId));
+  $UPDATE(data, { aggregateId, payload }) {
+    const target = data.findIndex(entry => entry._id.equals(aggregateId));
 
-    stateCache = stateCache.splice(target, 1, payload);
+    data[target] = payload;
 
-    return stateCache;
+    return data;
   }
 
   /**
    * Method that resolves the PATCH event
    *
-   * @param {Array} stateCache Accumulator array containing the state of the aggregate
+   * @param {Array} data Accumulator array containing the data of the aggregate
    * @param {Event} event Event object containing information needed to resolve the event
    * @returns {Array} An accumulator array with a patched entry
    * @memberof EventStoreCRUD
    */
-  $PATCH(stateCache, { aggregateId, payload }) {
-    const target = stateCache.findIndex(entry => entry._id.equals(aggregateId));
+  $PATCH(data, { aggregateId, payload }) {
+    const target = data.findIndex(entry => entry._id.equals(aggregateId));
 
-    mergeWith(stateCache[target], payload, (objValue, srcValue) => {
+    mergeWith(data[target], payload, (objValue, srcValue) => {
       if (isArray(objValue)) {
         return objValue.concat(srcValue);
       }
@@ -145,53 +86,43 @@ class EventStore extends DataSource {
       return undefined;
     });
 
-    return stateCache;
+    return data;
   }
 
   /**
-   * Method that resolves the DELETE event
+   * Method that resolves the REMOVE event
    *
-   * @param {Array} stateCache Accumulator array containing the state of the aggregate
+   * @param {Array} data Accumulator array containing the data of the aggregate
    * @param {Event} event Event object containing information needed to resolve the event
    * @returns {Array} An accumulator array with a removed entry
    * @memberof EventStoreCRUD
    */
-  $DELETE(stateCache, { aggregateId }) {
-    return stateCache.filter(entry => !entry._id.equals(aggregateId));
+  $REMOVE(data, { aggregateId }) {
+    const target = data.findIndex(entry => entry._id.equals(aggregateId));
+
+    data[target]._removed = true;
+
+    return data;
   }
 
   /**
    * Method that resolves the non-CRUD events and throw warnings about unresolved events
    *
-   * @param {Array} stateCache Accumulator array containing the state of the aggregate
+   * @param {Array} data Accumulator array containing the data of the aggregate
    * @param {Event} event Event object containing information needed to resolve the event
    * @returns {Array} The accumulator array withtout modifications
    * @memberof EventStoreCRUD
    */
-  $DEFAULT(stateCache, event) {
+  $DEFAULT(data, event) {
     const { type } = event;
 
     if (this[`$${type}`]) {
-      stateCache = this[`$${type}`](stateCache, event);
+      data = this[`$${type}`](data, event);
     } else {
       console.warn(`⚠  Unhandled event ${this.aggregateName}@${type}`);
     }
 
-    return stateCache;
-  }
-
-  /**
-   * Method that gets called before the resolutions of the CREATE event
-   *
-   * @param {Object} obj Object that contains the result returned from the resolver on the parent field
-   * @param {Object} payload object with the arguments passed into the field in the query
-   * @param {Object} context Object containing the Apollo context
-   * @param {Object} info Object that contains information about the execution state of the query
-   * @returns {Array} An array with the same parameters passed in input
-   * @memberof EventStoreCRUD
-   */
-  beforeCreate(obj, payload, context, info) {
-    return [obj, payload, context, info];
+    return data;
   }
 
   /**
@@ -209,21 +140,6 @@ class EventStore extends DataSource {
     const entry = await this.get(id).catch(e => e);
 
     return entry;
-  }
-
-  /**
-   * Method that gets called after the resolutions of the CREATE event
-   *
-   * @param {Object} obj Object that contains the result returned from the resolver on the parent field
-   * @param {Object} payload object with the arguments passed into the field in the query
-   * @param {Object} context Object containing the Apollo context
-   * @param {Object} info Object that contains information about the execution state of the query
-   * @param {Object | Error} created The Object that has been created or an error
-   * @returns {Array} An array with the same parameters passed in input
-   * @memberof EventStoreCRUD
-   */
-  afterCreate(obj, payload, context, info, created) {
-    return [obj, payload, context, info, created];
   }
 
   /**
@@ -266,26 +182,38 @@ class EventStore extends DataSource {
    * @returns {Object | Error} The Object that has been removed or an error
    * @memberof EventStoreCRUD
    */
-  async delete(id, params) {
+  async remove(id, params) {
     const entry = await this.get(id).catch(e => e);
-    await this.commit("DELETE", id);
+    await this.commit("REMOVE", id);
 
     return entry;
   }
 
   /**
-   * Find an entry on the state using MongoDB like queries
+   * Find an entry using MongoDB queries
    *
    * @param {Object} [params={}] { query: {} } Query object, MongoDB like queries can be used to filter data
-   * @param {String} model Name of the read model
    * @returns {Promise} A Promise that return all the data of the Aggregate Name
    * @memberof EventStoreCRUD
    */
-  async find(params = {}, model) {
+  async find(params = {}) {
     params.query = params.query || {};
+    params.pagination = params.pagination || {};
+    params.pagination.cursor = params.pagination.cursor || "";
+    params.pagination.limit = params.pagination.limit || 30;
 
-    const state = await this.state(model);
-    return state.filter(sift({ ...params.query }));
+    params.query._removed = false;
+
+    const snapshot = await this.buildSnapshot(params);
+    const data = snapshot.data.filter(entry => !entry._removed);
+    const total = snapshot.data.length - (snapshot.data.length - data.length)
+
+    return {
+      total,
+      limit: params.pagination.limit,
+      cursor: (snapshot.data.slice(-1).pop() || {})._id || "",
+      data
+    };
   }
 
   /**
@@ -293,16 +221,14 @@ class EventStore extends DataSource {
    *
    * @param {ObjectID} id The ID of the entry
    * @param {*} [params] Not used right now
-   * @param {String} model Name of the read model
    * @returns {Promise} A Promise that returns an Object entry if resolved
    * @memberof EventStoreCRUD
    */
-  async get(id, params, model) {
-    const entries = await this.find(
-      id ? { query: { _id: id } } : params,
-      model
+  async get(id, params) {
+    const page = await this.find(
+      id ? { query: { _id: new ObjectID(id) } } : params
     );
-    const entry = entries[0];
+    const entry = page.data[0];
 
     if (!entry) {
       throw new UserInputError(
@@ -323,7 +249,7 @@ class EventStore extends DataSource {
    * @memberof EventStore
    */
   commit(type, aggregateId, payload) {
-    return this.db.collection(this.collections.events).insertOne({
+    return this.db.collection(COLLECTIONS.EVENTS).insertOne({
       type,
       aggregateName: this.aggregateName,
       aggregateId: new ObjectID(aggregateId),
@@ -334,75 +260,124 @@ class EventStore extends DataSource {
   }
 
   /**
-   * Rebuild the state relative to the current Aggregate Name and an optional Aggregate ID
+   * Build a snapshot with the latest data
    *
-   * @param {String} model Name of the read model
-   * @returns {Promise} A promise that returns an Array containing the state relative to the current Aggregate Name if resolved
+   * @returns {Promise} A promise that returns a snapshot of the latest data
    * @memberof EventStore
    */
-  async state(model) {
-    const snapshot = await this.loadSnapshot(model);
+  async buildSnapshot(params) {
+    const snapshot = await this.loadSnapshot(params);
 
     const events = await this.db
-      .collection(this.collections.events)
+      .collection(COLLECTIONS.EVENTS)
       .find({
         aggregateName: this.aggregateName,
-        _id: { $nin: snapshot.eventIds }
+        aggregateId: { $in: snapshot.data.map(entry => entry._id) },
+        _id: snapshot.lastEventId
+          ? { $gt: snapshot.lastEventId }
+          : { $exists: true }
       })
       .sort({ timestamp: 1 })
       .toArray();
 
-    const state = events.reduce(
-      (...args) => this.hydrate(...args, model),
-      snapshot.state
-    );
-
-    await this.saveSnapshot(events, snapshot, state, model);
-
-    return state;
-  }
-
-  /**
-   * Loads a snapshot of a previous state
-   *
-   * @param {String} model Name of the read model
-   * @returns {Promise} A promise that returns a snapshot of a previous state
-   * @memberof EventStore
-   */
-  async loadSnapshot(model) {
-    return (
-      (await this.db
-        .collection(`${this.collections.snapshots}-${model}`)
-        .findOne({}, { sort: [["timestamp", -1]] })) || {
-        eventIds: [],
-        state: [],
-        timestamp: new Date(0)
+    const data = events.reduce((data, event) => {
+      switch (event.type) {
+        case "CREATE":
+          data = this.$CREATE(data, event);
+          break;
+        case "UPDATE":
+          data = this.$UPDATE(data, event);
+          break;
+        case "PATCH":
+          data = this.$PATCH(data, event);
+          break;
+        case "REMOVE":
+          data = this.$REMOVE(data, event);
+          break;
+        default:
+          data = this.$DEFAULT(data, event);
+          break;
       }
-    );
+
+      return data;
+    }, snapshot.data);
+
+    const latest = {
+      lastEventId: (events.slice(-1).pop() || {})._id || snapshot.lastEventId,
+      data,
+      timestamp: new Date(),
+      total: data.length
+    };
+
+    if (events.length > SNAPSHOT_TRIGGER) {
+      this.saveSnapshot(latest);
+    }
+
+    return latest;
   }
 
   /**
-   * Saves a snapshot of the current state
+   * Loads a previous saved snapshot
    *
-   * @param {Array} events Array of events processed by the hydrate function
-   * @param {Object} snapshot Previous snapshot, used to check if is we need to create a new snapshot
-   * @param {Array} state Array represting the crrent state
-   * @param {String} model Name of the read model
+   * @returns {Promise} A promise that returns a previous saved snapshot
    * @memberof EventStore
    */
-  async saveSnapshot(events, snapshot, state, model) {
-    const currentTimestamp = new Date();
+  async loadSnapshot(params) {
+    let snapshot = {
+      lastEventId: "",
+      data: [],
+      timestamp: new Date(0),
+      total: 0
+    };
 
-    if (
-      currentTimestamp.getTime() - snapshot.timestamp.getTime() >
-      config.SNAPSHOT_INTERVAL
-    ) {
-      this.db.collection(`${this.collections.snapshots}-${model}`).insertOne({
-        eventIds: [...snapshot.eventIds, ...events.map(event => event._id)],
-        state,
-        timestamp: currentTimestamp
-      });
-    }
+    try {
+      const meta = await this.db
+        .collection(COLLECTIONS.META)
+        .findOne({ key: "snapshot" });
+      const data = await this.db
+        .collection(COLLECTIONS.SNAPSHOT)
+        .find(params.query)
+        .limit(params.pagination.limit)
+        .toArray();
+      const total = await this.db
+        .collection(COLLECTIONS.SNAPSHOT)
+        .countDocuments(params.query);
+
+      snapshot.lastEventId = meta.lastEventId;
+      snapshot.data = data;
+      snapshot.timestamp = meta.timestamp;
+      snapshot.total = total;
+    } catch (error) {}
+
+    return snapshot;
+  }
+
+  /**
+   * Saves a snapshot of the current data
+   *
+   * @param {Array} snapshot Snapshot to be saved
+   * @param {Object} lastEventId The ID of the last parsed event
+   * @memberof EventStore
+   */
+  async saveSnapshot(snapshot) {
+    await this.db.collection(COLLECTIONS.SNAPSHOT).bulkWrite(
+      snapshot.data.map(entry => ({
+        replaceOne: {
+          filter: { _id: entry._id },
+          replacement: entry,
+          upsert: true
+        }
+      }))
+    );
+    await this.db.collection(COLLECTIONS.META).replaceOne(
+      { key: "snapshot" },
+      {
+        key: "snapshot",
+        timestamp: new Date(),
+        lastEventId: snapshot.lastEventId
+      },
+      { upsert: true }
+    );
   }
 }
 

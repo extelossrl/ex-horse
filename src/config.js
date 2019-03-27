@@ -1,11 +1,12 @@
 module.exports = {
-  DATABASE_URL: "mongodb://localhost:27017/ex-horse",
+  DATABASE_URL:
+    "mongodb://new-user_31:mAjvihUkOLbGAsvX@cluster0-shard-00-00-jndlt.mongodb.net:27017,cluster0-shard-00-01-jndlt.mongodb.net:27017,cluster0-shard-00-02-jndlt.mongodb.net:27017/staes_be?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&retryWrites=true",
   DATABASE_NAME: "ex-horse",
-  EVENTSTORE_COLLECTIONS: {
-    events: "events",
-    snapshots: "snapshots",
-    transactions: "transactions"
+  COLLECTIONS: {
+    META: "meta",
+    EVENTS: "events",
+    SNAPSHOT: "snapshot"
   },
   JWT_SECRET: "acqua-in-bocca",
-  SNAPSHOT_INTERVAL: 10 * 60 * 1000
+  SNAPSHOT_TRIGGER: 0
 };

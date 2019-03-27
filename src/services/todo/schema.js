@@ -16,10 +16,13 @@ const typeDefs = gql`
 
   extend type Commands {
     TodoCreate: Todo! @Create(service: "Todo", input: "TodoInput")
+    TodoUpdate: Todo! @Update(service: "Todo", input: "TodoInput")
+    TodoPatch: Todo! @Patch(service: "Todo", input: "TodoInput")
+    TodoRemove: Todo! @Remove(service: "Todo")
   }
 
   extend type Queries {
-    TodoFind: [Todo!]! @Find(service: "Todo", model: "Todo")
+    TodoFind: Page @Find(service: "Todo")
   }
 `;
 
