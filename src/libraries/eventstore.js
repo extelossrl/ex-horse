@@ -16,14 +16,18 @@ class EventStore extends DataSource {
    *
    * @param {Db} db MongoDB database istance
    * @param {String} collection Name used for the Aggregate Name
+   * @param {String} model Name used for the Model Name
    * @memberof EventStore
    */
-  constructor(db, collection) {
+  constructor(db, collection, model = "CRUD") {
     super()
 
     this.db = db
     this.aggregateName = collection.toUpperCase()
-    this.collection = `${COLLECTIONS.SNAPSHOT}-${this.aggregateName}`
+    this.modelName = model
+    this.collection = `${COLLECTIONS.SNAPSHOT}-${this.aggregateName}@${
+      this.modelName
+    }`
   }
 
   /**
@@ -42,7 +46,7 @@ class EventStore extends DataSource {
    * @param {Array} data Accumulator array containing the data of the aggregate
    * @param {Event} event Event object containing information needed to resolve the event
    * @returns {Array} An accumulator array with a new entry
-   * @memberof EventStoreCRUD
+   * @memberof EventStore
    */
   $CREATE(data, { aggregateId, payload }) {
     return [...data, { ...payload, _id: aggregateId }]
@@ -54,7 +58,7 @@ class EventStore extends DataSource {
    * @param {Array} data Accumulator array containing the data of the aggregate
    * @param {Event} event Event object containing information needed to resolve the event
    * @returns {Array} An accumulator array with a replaced entry
-   * @memberof EventStoreCRUD
+   * @memberof EventStore
    */
   $UPDATE(data, { aggregateId, payload }) {
     const target = data.findIndex((entry) => entry._id.equals(aggregateId))
@@ -70,7 +74,7 @@ class EventStore extends DataSource {
    * @param {Array} data Accumulator array containing the data of the aggregate
    * @param {Event} event Event object containing information needed to resolve the event
    * @returns {Array} An accumulator array with a patched entry
-   * @memberof EventStoreCRUD
+   * @memberof EventStore
    */
   $PATCH(data, { aggregateId, payload }) {
     const target = data.findIndex((entry) => entry._id.equals(aggregateId))
@@ -96,7 +100,7 @@ class EventStore extends DataSource {
    * @param {Array} data Accumulator array containing the data of the aggregate
    * @param {Event} event Event object containing information needed to resolve the event
    * @returns {Array} An accumulator array with a removed entry
-   * @memberof EventStoreCRUD
+   * @memberof EventStore
    */
   $REMOVE(data, { aggregateId }) {
     return data.filter((entry) => !entry._id.equals(aggregateId))
@@ -108,7 +112,7 @@ class EventStore extends DataSource {
    * @param {Array} data Accumulator array containing the data of the aggregate
    * @param {Event} event Event object containing information needed to resolve the event
    * @returns {Array} The accumulator array withtout modifications
-   * @memberof EventStoreCRUD
+   * @memberof EventStore
    */
   $DEFAULT(data, event) {
     const { type } = event
@@ -128,7 +132,7 @@ class EventStore extends DataSource {
    * @param {Object} data Data of the Object that will be created
    * @param {*} [params] Not used right now
    * @returns {Promise} A Promise that returns the Object that has been created or an error if resoved
-   * @memberof EventStoreCRUD
+   * @memberof EventStore
    */
   async create(data, params) {
     const id = new ObjectID()
@@ -146,7 +150,7 @@ class EventStore extends DataSource {
    * @param {Object} data Object containing the new data
    * @param {*} [params] Not used right now
    * @returns {Object | Error} The Object that has been replaced or an error
-   * @memberof EventStoreCRUD
+   * @memberof EventStore
    */
   async update(id, data, params) {
     await this.commit("UPDATE", id, data)
@@ -162,7 +166,7 @@ class EventStore extends DataSource {
    * @param {Object} data Object containing the new data
    * @param {*} [params] Not used right now
    * @returns {Object | Error} The Object that has been modified or an error
-   * @memberof EventStoreCRUD
+   * @memberof EventStore
    */
   async patch(id, data, params) {
     await this.commit("PATCH", id, data)
@@ -177,7 +181,7 @@ class EventStore extends DataSource {
    * @param {ObjectID} id ID of the entry that needs to be removed
    * @param {*} [params] Not used right now
    * @returns {Object | Error} The Object that has been removed or an error
-   * @memberof EventStoreCRUD
+   * @memberof EventStore
    */
   async remove(id, params) {
     const entry = await this.get(id).catch((e) => e)
@@ -191,7 +195,7 @@ class EventStore extends DataSource {
    *
    * @param {Object} [params={}] { query: {} } Query object, MongoDB like queries can be used to filter data
    * @returns {Promise} A Promise that return all the data of the Aggregate Name
-   * @memberof EventStoreCRUD
+   * @memberof EventStore
    */
   async find(params = {}) {
     params.query = params.query || {}
@@ -215,7 +219,7 @@ class EventStore extends DataSource {
    * @param {ObjectID} id The ID of the entry
    * @param {*} [params] Not used right now
    * @returns {Promise} A Promise that returns an Object entry if resolved
-   * @memberof EventStoreCRUD
+   * @memberof EventStore
    */
   async get(id, params) {
     const page = await this.find(
