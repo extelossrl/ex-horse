@@ -360,7 +360,7 @@ class EventStore extends DataSource {
 
     for (const event of events) {
       if (event.type === "REMOVE") {
-        operations.push({ deleteOne: { _id: event.aggregateId } })
+        operations.push({ deleteOne: { filter: { _id: event.aggregateId } } })
       } else {
         const entry = snapshot.data.find((entry) =>
           entry._id.equals(event.aggregateId)
