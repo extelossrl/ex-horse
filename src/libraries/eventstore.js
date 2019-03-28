@@ -202,7 +202,7 @@ class EventStore extends DataSource {
     const snapshot = await this.buildSnapshot(params)
 
     return {
-      total: snapshot.data.length,
+      total: snapshot.total,
       limit: params.pagination.limit,
       cursor: (snapshot.data.slice(-1).pop() || {})._id || "",
       data: snapshot.data
