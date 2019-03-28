@@ -8,5 +8,5 @@ module.exports = {
     SNAPSHOT: "snapshot"
   },
   JWT_SECRET: "acqua-in-bocca",
-  SNAPSHOT_TRIGGER: 0
+  SNAPSHOT_TRIGGER: 1
 }

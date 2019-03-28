@@ -23,6 +23,7 @@ class EventStore extends DataSource {
 
     this.db = db
     this.aggregateName = collection.toUpperCase()
+    this.collection = `${COLLECTIONS.SNAPSHOT}-${this.aggregateName}`
   }
 
   /**
@@ -44,7 +45,7 @@ class EventStore extends DataSource {
    * @memberof EventStoreCRUD
    */
   $CREATE(data, { aggregateId, payload }) {
-    return [...data, { ...payload, _id: aggregateId, _removed: false }]
+    return [...data, { ...payload, _id: aggregateId }]
   }
 
   /**
@@ -98,11 +99,7 @@ class EventStore extends DataSource {
    * @memberof EventStoreCRUD
    */
   $REMOVE(data, { aggregateId }) {
-    const target = data.findIndex((entry) => entry._id.equals(aggregateId))
-
-    data[target]._removed = true
-
-    return data
+    return data.filter((entry) => !entry._id.equals(aggregateId))
   }
 
   /**
@@ -202,17 +199,13 @@ class EventStore extends DataSource {
     params.pagination.cursor = params.pagination.cursor || ""
     params.pagination.limit = params.pagination.limit || 30
 
-    params.query._removed = false
-
     const snapshot = await this.buildSnapshot(params)
-    const data = snapshot.data.filter((entry) => !entry._removed)
-    const total = snapshot.data.length - (snapshot.data.length - data.length)
 
     return {
-      total,
+      total: snapshot.data.length,
       limit: params.pagination.limit,
       cursor: (snapshot.data.slice(-1).pop() || {})._id || "",
-      data
+      data: snapshot.data
     }
   }
 
@@ -272,7 +265,10 @@ class EventStore extends DataSource {
       .collection(COLLECTIONS.EVENTS)
       .find({
         aggregateName: this.aggregateName,
-        aggregateId: { $in: snapshot.data.map((entry) => entry._id) },
+        // $or: [
+        //   { aggregateId: { $in: snapshot.data.map((entry) => entry._id) } },
+        //   { type: "CREATE" }
+        // ],
         _id: snapshot.lastEventId
           ? { $gt: snapshot.lastEventId }
           : { $exists: true }
@@ -310,7 +306,7 @@ class EventStore extends DataSource {
     }
 
     if (events.length > SNAPSHOT_TRIGGER) {
-      this.saveSnapshot(latest)
+      this.saveSnapshot(latest, events)
     }
 
     return latest
@@ -333,14 +329,14 @@ class EventStore extends DataSource {
     try {
       const meta = await this.db
         .collection(COLLECTIONS.META)
-        .findOne({ key: "snapshot" })
+        .findOne({ key: this.collection })
       const data = await this.db
-        .collection(COLLECTIONS.SNAPSHOT)
+        .collection(this.collection)
         .find(params.query)
         .limit(params.pagination.limit)
         .toArray()
       const total = await this.db
-        .collection(COLLECTIONS.SNAPSHOT)
+        .collection(this.collection)
         .countDocuments(params.query)
 
       snapshot.lastEventId = meta.lastEventId
@@ -359,20 +355,31 @@ class EventStore extends DataSource {
    * @param {Object} lastEventId The ID of the last parsed event
    * @memberof EventStore
    */
-  async saveSnapshot(snapshot) {
-    await this.db.collection(COLLECTIONS.SNAPSHOT).bulkWrite(
-      snapshot.data.map((entry) => ({
-        replaceOne: {
-          filter: { _id: entry._id },
-          replacement: entry,
-          upsert: true
-        }
-      }))
-    )
+  async saveSnapshot(snapshot, events) {
+    const operations = []
+
+    for (const event of events) {
+      if (event.type === "REMOVE") {
+        operations.push({ deleteOne: { _id: event.aggregateId } })
+      } else {
+        const entry = snapshot.data.find((entry) =>
+          entry._id.equals(event.aggregateId)
+        )
+        operations.push({
+          replaceOne: {
+            filter: { _id: event.aggregateId },
+            replacement: entry,
+            upsert: true
+          }
+        })
+      }
+    }
+
+    await this.db.collection(this.collection).bulkWrite(operations)
     await this.db.collection(COLLECTIONS.META).replaceOne(
-      { key: "snapshot" },
+      { key: this.collection },
       {
-        key: "snapshot",
+        key: this.collection,
         timestamp: new Date(),
         lastEventId: snapshot.lastEventId
       },
