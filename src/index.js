@@ -29,5 +29,5 @@ const config = require("./config")
 
   const { url } = await server.listen()
 
-  console.log(`🚀  Server ready at ${url}`)
+  console.log(`🐴 Server ready at ${url}`)
 })()
