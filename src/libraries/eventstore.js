@@ -276,10 +276,6 @@ class EventStore extends DataSource {
       .collection(COLLECTIONS.EVENTS)
       .find({
         aggregateName: this.aggregateName,
-        $or: [
-          { aggregateId: { $in: snapshot.data.map((entry) => entry._id) } },
-          { type: "CREATE" }
-        ],
         _id: snapshot.lastEventId
           ? { $gt: snapshot.lastEventId }
           : { $exists: true }
