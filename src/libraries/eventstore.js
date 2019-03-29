@@ -28,13 +28,13 @@ class EventStore extends DataSource {
   }
 
   /**
-   * Get the collection name used for the snapshot
+   * Get the base collection name used for the snapshot
    *
    * @readonly
    * @memberof EventStore
    */
-  get collection() {
-    return `${COLLECTIONS.SNAPSHOT}-${this.aggregateName}@${this.modelName}`
+  get collectionBase() {
+    return `${COLLECTIONS.SNAPSHOT}-${this.aggregateName}-${this.modelName}`
   }
 
   /**
@@ -317,7 +317,7 @@ class EventStore extends DataSource {
     }
 
     if (events.length > SNAPSHOT_TRIGGER) {
-      this.saveSnapshot(latest, events)
+      this.saveSnapshot(latest, events, snapshot)
     }
 
     return latest
@@ -338,21 +338,36 @@ class EventStore extends DataSource {
     }
 
     try {
-      const meta = await this.db
-        .collection(COLLECTIONS.META)
-        .findOne({ key: this.collection })
+      const collections = await this.db
+        .listCollections(
+          { name: { $regex: new RegExp(`^${this.collectionBase}-.+`) } },
+          { nameOnly: true }
+        )
+        .toArray()
+      const collection = collections
+        .map((collection) => {
+          const [timestamp, lastEventId] = collection.name.split("-").slice(-2)
+          return {
+            name: collection.name,
+            timestamp: new Date(parseInt(timestamp)),
+            lastEventId: new ObjectID(lastEventId)
+          }
+        })
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 1)
+        .pop()
       const data = await this.db
-        .collection(this.collection)
+        .collection(collection.name)
         .find(params.query)
         .limit(params.pagination.limit)
         .toArray()
       const total = await this.db
-        .collection(this.collection)
+        .collection(collection.name)
         .countDocuments(params.query)
 
-      snapshot.lastEventId = meta.lastEventId
+      snapshot.lastEventId = collection.lastEventId
       snapshot.data = data
-      snapshot.timestamp = meta.timestamp
+      snapshot.timestamp = collection.timestamp
       snapshot.total = total
     } catch (error) {}
 
@@ -366,8 +381,21 @@ class EventStore extends DataSource {
    * @param {Object} lastEventId The ID of the last parsed event
    * @memberof EventStore
    */
-  async saveSnapshot(snapshot, events) {
+  async saveSnapshot(snapshot, events, previous) {
+    const timestamp = new Date().getTime()
+    const target = `${this.collectionBase}-${timestamp}-${snapshot.lastEventId}`
     const operations = []
+
+    if (previous.timestamp.getTime() > 0) {
+      await this.db
+        .collection(
+          `${this.collectionBase}-${previous.timestamp.getTime()}-${
+            previous.lastEventId
+          }`
+        )
+        .aggregate([{ $match: {} }, { $out: target }])
+        .toArray()
+    }
 
     for (const event of events) {
       if (event.type === "REMOVE") {
@@ -386,16 +414,7 @@ class EventStore extends DataSource {
       }
     }
 
-    await this.db.collection(this.collection).bulkWrite(operations)
-    await this.db.collection(COLLECTIONS.META).replaceOne(
-      { key: this.collection },
-      {
-        key: this.collection,
-        timestamp: new Date(),
-        lastEventId: snapshot.lastEventId
-      },
-      { upsert: true }
-    )
+    await this.db.collection(target).bulkWrite(operations)
   }
 }
 
