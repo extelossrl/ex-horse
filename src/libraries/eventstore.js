@@ -276,9 +276,7 @@ class EventStore extends DataSource {
       .collection(COLLECTIONS.EVENTS)
       .find({
         aggregateName: this.aggregateName,
-        _id: snapshot.lastEventId
-          ? { $gt: snapshot.lastEventId }
-          : { $exists: true }
+        _id: { $gt: snapshot.lastEventId }
       })
       .sort({ timestamp: 1 })
       .toArray()
@@ -327,7 +325,7 @@ class EventStore extends DataSource {
    */
   async loadSnapshot(params) {
     let snapshot = {
-      lastEventId: "",
+      lastEventId: new ObjectID("000000000000000000000000"),
       data: [],
       timestamp: new Date(0),
       total: 0
