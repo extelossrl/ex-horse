@@ -25,9 +25,16 @@ class EventStore extends DataSource {
     this.db = db
     this.aggregateName = collection.toUpperCase()
     this.modelName = model
-    this.collection = `${COLLECTIONS.SNAPSHOT}-${this.aggregateName}@${
-      this.modelName
-    }`
+  }
+
+  /**
+   * Get the collection name used for the snapshot
+   *
+   * @readonly
+   * @memberof EventStore
+   */
+  get collection() {
+    return `${COLLECTIONS.SNAPSHOT}-${this.aggregateName}@${this.modelName}`
   }
 
   /**
