@@ -21,11 +21,11 @@ class EventStore extends DataSource {
    * @param {String} model Name used for the Model Name
    * @memberof EventStore
    */
-  constructor(db, collection, model = "CRUD") {
+  constructor(db, aggregate, model = "CRUD") {
     super()
 
     this.db = db
-    this.aggregateName = collection.toUpperCase()
+    this.aggregateName = aggregate.toUpperCase()
     this.modelName = model.toUpperCase()
   }
 

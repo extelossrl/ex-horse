@@ -66,6 +66,51 @@ class AutoLoad {
 
     return config
   }
+
+  static fallbackServices(db, more) {
+    const config = {
+      typeDefs: [],
+      resolvers: [],
+      dataSources: {}
+    }
+
+    const services = [...more]
+
+    services.forEach((service) => {
+      const { typeDefs, resolvers } = service.schema
+      config.typeDefs.push(typeDefs)
+      config.resolvers.push(resolvers)
+
+      const { name, instance, aggregate, model } = service.controller
+      // eslint-disable-next-line new-cap
+      config.dataSources[name] = new instance(db, aggregate, model)
+    })
+
+    return config
+  }
+
+  static fallbackPlugins(more) {
+    const config = {
+      typeDefs: [],
+      resolvers: [],
+      schemaDirectives: {},
+      dataSources: {}
+    }
+
+    const plugins = [
+      require("../plugins/acl"),
+      require("../plugins/cqrs"),
+      require("../plugins/crud"),
+      require("../plugins/date"),
+      require("../plugins/json"),
+      require("../plugins/paginate"),
+      ...more
+    ]
+
+    plugins.forEach((install) => install(config))
+
+    return config
+  }
 }
 
 module.exports = AutoLoad
