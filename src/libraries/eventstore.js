@@ -208,16 +208,16 @@ class EventStore extends DataSource {
    */
   async find(params = {}) {
     params.query = params.query || {}
-    params.pagination = params.pagination || {}
-    params.pagination.cursor = params.pagination.cursor || noID
-    params.pagination.limit = params.pagination.limit || 30
+    params.page = params.page || {}
+    params.page.cursor = params.page.cursor || noID
+    params.page.limit = params.page.limit || 30
     params.sort = params.sort || {}
 
     const snapshot = await this.buildSnapshot(params)
 
     return {
       total: snapshot.total,
-      limit: params.pagination.limit,
+      limit: params.page.limit,
       cursor: (snapshot.data.slice(-1).pop() || {})._id || noID,
       data: snapshot.data
     }
@@ -345,8 +345,9 @@ class EventStore extends DataSource {
     if (meta) {
       const data = await this.db
         .collection(this.collection)
-        .find({ _id: { $gt: params.pagination.cursor }, ...params.query })
-        .limit(params.pagination.limit)
+        .find({ _id: { $gt: params.page.cursor }, ...params.query })
+        .sort(params.sort)
+        .limit(params.page.limit)
         .toArray()
       const total = await this.db
         .collection(this.collection)
