@@ -2,7 +2,6 @@ const { DataSource } = require("apollo-datasource")
 const { UserInputError } = require("apollo-server")
 const { ObjectID } = require("mongodb")
 const { mergeWith, isArray } = require("lodash")
-const { COLLECTIONS, SNAPSHOT_TRIGGER } = require("../config")
 
 const noID = new ObjectID("000000000000000000000000")
 
@@ -21,10 +20,11 @@ class EventStore extends DataSource {
    * @param {String} model Name used for the Model Name
    * @memberof EventStore
    */
-  constructor(db, aggregate, model = "CRUD") {
+  constructor(db, config, aggregate, model = "CRUD") {
     super()
 
     this.db = db
+    this.config = config
     this.aggregateName = aggregate.toUpperCase()
     this.modelName = model.toUpperCase()
   }
@@ -35,8 +35,10 @@ class EventStore extends DataSource {
    * @readonly
    * @memberof EventStore
    */
-  get collection() {
-    return `${COLLECTIONS.SNAPSHOT}-${this.aggregateName}-${this.modelName}`
+  get snapshotName() {
+    return `${this.config.collections.snapshot}-${this.aggregateName}-${
+      this.modelName
+    }`
   }
 
   /**
@@ -256,7 +258,7 @@ class EventStore extends DataSource {
    * @memberof EventStore
    */
   commit(type, aggregateId, payload) {
-    return this.db.collection(COLLECTIONS.EVENTS).insertOne({
+    return this.db.collection(this.config.collections.events).insertOne({
       type,
       aggregateName: this.aggregateName,
       aggregateId: new ObjectID(aggregateId),
@@ -276,7 +278,7 @@ class EventStore extends DataSource {
     const snapshot = await this.loadSnapshot(params)
 
     const events = await this.db
-      .collection(COLLECTIONS.EVENTS)
+      .collection(this.config.collections.events)
       .find({
         _id: { $nin: snapshot.eventIds },
         aggregateName: this.aggregateName,
@@ -317,7 +319,7 @@ class EventStore extends DataSource {
       total: data.length
     }
 
-    if (events.length > SNAPSHOT_TRIGGER) {
+    if (events.length > this.config.snapshotTrigger) {
       this.saveSnapshot(latest, events)
     }
 
@@ -339,18 +341,18 @@ class EventStore extends DataSource {
     }
 
     const meta = await this.db
-      .collection(COLLECTIONS.META)
-      .findOne({ key: this.collection })
+      .collection(this.config.collections.meta)
+      .findOne({ key: this.snapshotName })
 
     if (meta) {
       const data = await this.db
-        .collection(this.collection)
+        .collection(this.snapshotName)
         .find({ _id: { $gt: params.page.cursor }, ...params.query })
         .sort(params.sort)
         .limit(params.page.limit)
         .toArray()
       const total = await this.db
-        .collection(this.collection)
+        .collection(this.snapshotName)
         .countDocuments(params.query)
 
       snapshot.eventIds = meta.eventIds
@@ -389,11 +391,11 @@ class EventStore extends DataSource {
       }
     }
 
-    await this.db.collection(this.collection).bulkWrite(operations)
-    await this.db.collection(COLLECTIONS.META).replaceOne(
-      { key: this.collection },
+    await this.db.collection(this.snapshotName).bulkWrite(operations)
+    await this.db.collection(this.config.collections.meta).replaceOne(
+      { key: this.snapshotName },
       {
-        key: this.collection,
+        key: this.snapshotName,
         timestamp: snapshot.timestamp,
         eventIds: snapshot.eventIds
       },
