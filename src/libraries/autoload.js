@@ -1,31 +1,39 @@
-const requireGlob = require("require-glob")
+const path = require("path")
+const glob = require("glob")
 
 class AutoLoad {
-  static async services(db) {
+  static services(db) {
     const config = {
       typeDefs: [],
       resolvers: [],
       dataSources: {}
     }
 
-    const schemas = await requireGlob(["../services/*/schema.js"])
-    const controllers = await requireGlob(["../services/*/controller.js"])
+    glob
+      .sync(path.resolve(__dirname, "../services/*/schema.js"))
+      .concat(glob.sync(path.resolve("services/*/schema.js")))
+      .forEach((file) => {
+        const { typeDefs, resolvers } = require(file)
 
-    Object.entries(schemas).forEach(([key, value]) => {
-      config.typeDefs.push(value.schema.typeDefs)
-      config.resolvers.push(value.schema.resolvers)
-    })
+        config.typeDefs.push(typeDefs)
+        config.resolvers.push(resolvers)
+      })
 
-    Object.entries(controllers).forEach(([key, value]) => {
-      const service = key.charAt(0).toUpperCase() + key.slice(1)
-      // eslint-disable-next-line new-cap
-      config.dataSources[service] = new value.controller(db, `${key}s`)
-    })
+    glob
+      .sync(path.resolve(__dirname, "../services/*/controller.js"))
+      .concat(glob.sync(path.resolve("services/*/controller.js")))
+      .forEach((file) => {
+        const Controller = require(file)
+        const folder = path.basename(path.resolve(file, "../"))
+        const service = folder.charAt(0).toUpperCase() + folder.slice(1)
+
+        config.dataSources[service] = new Controller(db, `${service}s`)
+      })
 
     return config
   }
 
-  static async plugins() {
+  static plugins() {
     const config = {
       typeDefs: [],
       resolvers: [],
@@ -33,8 +41,13 @@ class AutoLoad {
       dataSources: {}
     }
 
-    const plugins = await requireGlob(["../plugins/*.js"])
-    Object.entries(plugins).forEach(([key, value]) => value(config))
+    glob
+      .sync(path.resolve(__dirname, "../plugins/*.js"))
+      .concat(glob.sync(path.resolve("plugins/*.js")))
+      .forEach((file) => {
+        const install = require(file)
+        install(config)
+      })
 
     return config
   }
