@@ -26,7 +26,7 @@ class EventStore extends DataSource {
 
     this.db = db
     this.aggregateName = collection.toUpperCase()
-    this.modelName = model
+    this.modelName = model.toUpperCase()
   }
 
   /**

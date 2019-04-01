@@ -28,10 +28,10 @@ const typeDefs = gql`
 
 const resolvers = {
   Commands: {
-    UserSignUp: async (obj, { username, password }, context, info) => {
+    UserSignUp: (obj, { username, password }, context, info) => {
       return context.dataSources.User.signUp(username, password)
     },
-    UserSignIn: async (obj, { username, password }, context, info) => {
+    UserSignIn: (obj, { username, password }, context, info) => {
       return context.dataSources.User.signIn(username, password)
     }
   },

@@ -20,14 +20,29 @@ class AutoLoad {
       })
 
     glob
-      .sync(path.resolve(__dirname, "../services/*/controller.js"))
-      .concat(glob.sync(path.resolve("services/*/controller.js")))
+      .sync(path.resolve(__dirname, "../services/*/controller?(.*).js"))
+      .concat(glob.sync(path.resolve("services/*/controller?(.*).js")))
       .forEach((file) => {
         const Controller = require(file)
-        const folder = path.basename(path.resolve(file, "../"))
+        const folder = path
+          .basename(path.resolve(file, "../"))
+          .toLocaleLowerCase()
         const service = folder.charAt(0).toUpperCase() + folder.slice(1)
+        const model = (
+          path
+            .basename(file)
+            .toLocaleLowerCase()
+            .match(/controller\.([a-z]+)\.js/) || []
+        )
+          .slice(1)
+          .pop()
+        const key = model ? model.charAt(0).toUpperCase() + model.slice(1) : ""
 
-        config.dataSources[service] = new Controller(db, `${service}s`)
+        config.dataSources[`${service}${key}`] = new Controller(
+          db,
+          `${service}s`,
+          model
+        )
       })
 
     return config

@@ -1,5 +1,5 @@
 const { gql } = require("apollo-server")
-const ExHorseServer = require("./server")
+const Server = require("./server")
 const EventStore = require("./libraries/eventstore")
 
-module.exports = { gql, ExHorseServer, EventStore }
+module.exports = { gql, Server, EventStore }
