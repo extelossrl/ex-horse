@@ -1,7 +1,10 @@
+const { DataSource } = require("apollo-datasource")
 const cloudinary = require("cloudinary")
 
-class Cloudinary {
+class Cloudinary extends DataSource {
   constructor(config) {
+    super()
+
     cloudinary.config(config)
   }
 
@@ -21,4 +24,8 @@ class Cloudinary {
   }
 }
 
-module.exports = Cloudinary
+module.exports = ({ dataSources, config }) => {
+  dataSources.push((...args) => ({
+    Cloudinary: new Cloudinary(config.cloudinary)
+  }))
+}

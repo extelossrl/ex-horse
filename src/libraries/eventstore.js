@@ -24,7 +24,8 @@ class EventStore extends DataSource {
     super()
 
     this.db = db
-    this.config = config
+    this.collections = config.collections
+    this.snapshotTrigger = config.snapshotTrigger
     this.aggregateName = aggregate.toUpperCase()
     this.modelName = model.toUpperCase()
   }
@@ -36,7 +37,7 @@ class EventStore extends DataSource {
    * @memberof EventStore
    */
   get snapshotName() {
-    return `${this.config.collections.snapshot}-${this.aggregateName}-${
+    return `${this.collections.snapshot}-${this.aggregateName}-${
       this.modelName
     }`
   }
@@ -258,7 +259,7 @@ class EventStore extends DataSource {
    * @memberof EventStore
    */
   commit(type, aggregateId, payload) {
-    return this.db.collection(this.config.collections.events).insertOne({
+    return this.db.collection(this.collections.events).insertOne({
       type,
       aggregateName: this.aggregateName,
       aggregateId: new ObjectID(aggregateId),
@@ -278,7 +279,7 @@ class EventStore extends DataSource {
     const snapshot = await this.loadSnapshot(params)
 
     const events = await this.db
-      .collection(this.config.collections.events)
+      .collection(this.collections.events)
       .find({
         _id: { $nin: snapshot.eventIds },
         aggregateName: this.aggregateName,
@@ -319,7 +320,7 @@ class EventStore extends DataSource {
       total: data.length
     }
 
-    if (events.length > this.config.snapshotTrigger) {
+    if (events.length > this.snapshotTrigger) {
       this.saveSnapshot(latest, events)
     }
 
@@ -341,7 +342,7 @@ class EventStore extends DataSource {
     }
 
     const meta = await this.db
-      .collection(this.config.collections.meta)
+      .collection(this.collections.meta)
       .findOne({ key: this.snapshotName })
 
     if (meta) {
@@ -392,7 +393,7 @@ class EventStore extends DataSource {
     }
 
     await this.db.collection(this.snapshotName).bulkWrite(operations)
-    await this.db.collection(this.config.collections.meta).replaceOne(
+    await this.db.collection(this.collections.meta).replaceOne(
       { key: this.snapshotName },
       {
         key: this.snapshotName,

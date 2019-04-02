@@ -5,21 +5,25 @@ const { merge, mergeWith, isArray } = require("lodash")
 module.exports = async function(config = {}) {
   const defaults = {
     database: {
-      url:
-        "mongodb://new-user_31:mAjvihUkOLbGAsvX@cluster0-shard-00-00-jndlt.mongodb.net:27017,cluster0-shard-00-01-jndlt.mongodb.net:27017,cluster0-shard-00-02-jndlt.mongodb.net:27017/staes_be?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&retryWrites=true",
+      url: "mongodb://localhost",
       name: "ex-horse",
       collections: {
         meta: "meta",
         events: "events",
-        snapshot: "snapshot"
+        snapshot: "snapshot",
+        tasks: "tasks"
       },
       snapshotTrigger: 1
     },
-    authentication: {
+    auth: {
       jwtSecret: "acquainbocca"
     },
     acl: {},
-    cloudinary: {},
+    cloudinary: {
+      cloud_name: "carmhack",
+      api_key: "99186189232618",
+      api_secret: "52655b0d175d06660e55"
+    },
     plugins: [
       require("../plugins/cqrs"),
       require("../plugins/crud"),
@@ -41,6 +45,7 @@ module.exports = async function(config = {}) {
   const db = client.db(config.database.name)
 
   const context = {
+    db,
     config,
     typeDefs: [],
     resolvers: [],
@@ -83,8 +88,6 @@ module.exports = async function(config = {}) {
       for (const ctx of context.context) {
         merge(toRet, await ctx(...args))
       }
-
-      toRet.config = config
 
       return toRet
     }

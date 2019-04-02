@@ -5,7 +5,9 @@ const Authentication = require("../../libraries/authentication")
 class ServiceController extends EventStore {
   constructor(...args) {
     super(...args)
-    this.authentication = new Authentication(this.context.config.authentication)
+    this.authentication = new Authentication(
+      this.context.$config.authentication
+    )
   }
 
   $CREATE(data, { payload, aggregateId }) {
