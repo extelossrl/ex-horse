@@ -8,12 +8,12 @@ class ServiceController extends EventStore {
     this.authentication = new Authentication(this.context.config.authentication)
   }
 
-  $CREATE(stateCache, { payload, aggregateId }) {
-    if (stateCache.find((user) => user.username === payload.username)) {
-      return stateCache
+  $CREATE(data, { payload, aggregateId }) {
+    if (data.find((user) => user.username === payload.username)) {
+      return data
     }
 
-    return [...stateCache, { ...payload, _id: aggregateId }]
+    return [...data, { ...payload, _id: aggregateId }]
   }
 
   async signUp(username, password) {

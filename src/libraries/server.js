@@ -19,6 +19,7 @@ module.exports = async function(config = {}) {
       jwtSecret: "acquainbocca"
     },
     acl: {},
+    cloudinary: {},
     plugins: [
       require("../plugins/cqrs"),
       require("../plugins/crud"),
