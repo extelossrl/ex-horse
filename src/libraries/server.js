@@ -15,6 +15,10 @@ module.exports = async function(config = {}) {
       },
       snapshotTrigger: 1
     },
+    authentication: {
+      jwtSecret: "acquainbocca"
+    },
+    acl: {},
     plugins: [
       require("../plugins/cqrs"),
       require("../plugins/crud"),
@@ -78,6 +82,8 @@ module.exports = async function(config = {}) {
       for (const ctx of context.context) {
         merge(toRet, await ctx(...args))
       }
+
+      toRet.config = config
 
       return toRet
     }
