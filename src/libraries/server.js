@@ -1,6 +1,6 @@
 const { ApolloServer } = require("apollo-server")
 const { MongoClient } = require("mongodb")
-const { merge, mergeWith, isArray } = require("lodash")
+const { merge, defaultsDeep } = require("lodash")
 
 module.exports = async function(config = {}) {
   const defaults = {
@@ -28,16 +28,13 @@ module.exports = async function(config = {}) {
       require("../plugins/cqrs"),
       require("../plugins/crud"),
       require("../plugins/date"),
-      require("../plugins/json")
+      require("../plugins/json"),
+      require("../plugins/authentication")
     ],
     services: []
   }
 
-  mergeWith(config, defaults, (objValue, srcValue) => {
-    if (isArray(objValue)) {
-      return objValue.concat(srcValue)
-    }
-  })
+  defaultsDeep(config, defaults)
 
   const client = await MongoClient.connect(config.database.url, {
     useNewUrlParser: true
