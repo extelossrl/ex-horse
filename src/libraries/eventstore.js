@@ -317,7 +317,11 @@ class EventStore extends DataSource {
       eventIds: [...snapshot.eventIds, ...events.map((event) => event._id)],
       data,
       timestamp: new Date(),
-      total: data.length
+      total:
+        snapshot.total +
+        data.filter(
+          (entry) => !snapshot.data.find((e) => e._id.equals(entry._id))
+        ).length
     }
 
     if (events.length > this.snapshotTrigger) {
