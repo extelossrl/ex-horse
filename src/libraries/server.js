@@ -24,17 +24,19 @@ module.exports = async function(config = {}) {
       api_key: "99186189232618",
       api_secret: "52655b0d175d06660e55"
     },
-    plugins: [
-      require("../plugins/cqrs"),
-      require("../plugins/crud"),
-      require("../plugins/date"),
-      require("../plugins/json"),
-      require("../plugins/authentication")
-    ],
+    plugins: [],
     services: []
   }
 
   defaultsDeep(config, defaults)
+
+  config.plugins.push(
+    require("../plugins/cqrs"),
+    require("../plugins/crud"),
+    require("../plugins/date"),
+    require("../plugins/json"),
+    require("../plugins/authentication")
+  )
 
   const client = await MongoClient.connect(config.database.url, {
     useNewUrlParser: true
