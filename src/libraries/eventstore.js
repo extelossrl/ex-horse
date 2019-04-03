@@ -213,6 +213,7 @@ class EventStore extends DataSource {
     params.query = params.query || {}
     params.page = params.page || {}
     params.page.cursor = params.page.cursor || noID
+    params.page.cursor = new ObjectID(params.page.cursor)
     params.page.limit = params.page.limit || 30
     params.sort = params.sort || {}
 
