@@ -16,7 +16,7 @@ module.exports = async function(config = {}) {
       snapshotTrigger: 1
     },
     auth: {
-      jwtSecret: "acquainbocca"
+      secret: "acquainbocca"
     },
     acl: {},
     cloudinary: {

@@ -223,7 +223,7 @@ class EventStore extends DataSource {
       total: snapshot.total,
       limit: params.page.limit,
       cursor: (snapshot.data.slice(-1).pop() || {})._id || noID,
-      data: snapshot.data
+      data: snapshot.data.slice(0, params.page.limit)
     }
   }
 

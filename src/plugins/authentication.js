@@ -12,7 +12,7 @@ class Auth {
 
       return jwt.verify(
         source.authorization.replace("Bearer ", ""),
-        this.config.jwtSecret
+        this.config.secret
       )
     } catch (error) {
       return {
@@ -32,7 +32,7 @@ class Auth {
   }
 
   generateJWT(payload) {
-    return jwt.sign(payload, this.config.jwtSecret)
+    return jwt.sign(payload, this.config.secret)
   }
 
   hidePassword(user) {
