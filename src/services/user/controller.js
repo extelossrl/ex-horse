@@ -25,9 +25,7 @@ class ServiceController extends EventStore {
 
   async signIn(username, password) {
     const psw = await this.context.$auth.hashPassword(password)
-    const user = await this.get(null, { query: { username } }, "User").catch(
-      (e) => e
-    )
+    const user = await this.get(null, { query: { username } }).catch((e) => e)
 
     await super.commit("LOGIN", user ? user.id : null, {
       username,

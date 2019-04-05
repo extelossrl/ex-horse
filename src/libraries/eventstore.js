@@ -216,6 +216,7 @@ class EventStore extends DataSource {
     params.page.cursor = new ObjectID(params.page.cursor)
     params.page.limit = params.page.limit || 30
     params.sort = params.sort || {}
+    params.project = params.project || {}
 
     const snapshot = await this.buildSnapshot(params)
 
@@ -353,7 +354,10 @@ class EventStore extends DataSource {
     if (meta) {
       const data = await this.db
         .collection(this.snapshotName)
-        .find({ _id: { $gt: params.page.cursor }, ...params.query })
+        .find(
+          { _id: { $gt: params.page.cursor }, ...params.query },
+          params.project
+        )
         .sort(params.sort)
         .limit(params.page.limit)
         .toArray()
