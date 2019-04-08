@@ -12,8 +12,8 @@ class Task extends DataSource {
     this.collection = config
   }
 
-  create({ type, payload }) {
-    return this.db.collection(this.collection).insertOne({
+  async create({ type, payload }) {
+    const task = await this.db.collection(this.collection).insertOne({
       type,
       procedureId: new ObjectID(),
       state: "CREATED",
@@ -22,6 +22,8 @@ class Task extends DataSource {
       output: "",
       timestamp: new Date()
     })
+
+    return task.ops[0]
   }
 
   async find(params = {}) {
