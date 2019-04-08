@@ -12,13 +12,12 @@ class Task extends DataSource {
     this.collection = config
   }
 
-  create({ type, payload, runner = "DEFAULT" }) {
+  create({ type, payload }) {
     return this.db.collection(this.collection).insertOne({
       type,
       procedureId: new ObjectID(),
       state: "CREATED",
       payload,
-      runner,
       progress: [],
       output: "",
       timestamp: new Date()
