@@ -7,7 +7,7 @@ class Create extends SchemaDirectiveVisitor {
 
     field.args.push(
       { name: "data", type: this.schema.getType(input) },
-      { name: "params", type: this.schema.getType("JSON") }
+      { name: "params", type: this.schema.getType("FindInput") }
     )
 
     field.resolve = async (parent, { data, params }, context, info) => {
@@ -24,7 +24,7 @@ class Update extends SchemaDirectiveVisitor {
     field.args.push(
       { name: "id", type: this.schema.getType("ID") },
       { name: "data", type: this.schema.getType(input) },
-      { name: "params", type: this.schema.getType("JSON") }
+      { name: "params", type: this.schema.getType("FindInput") }
     )
 
     field.resolve = (parent, { id, data, params }, context, info) => {
@@ -41,7 +41,7 @@ class Patch extends SchemaDirectiveVisitor {
     field.args.push(
       { name: "id", type: this.schema.getType("ID") },
       { name: "data", type: this.schema.getType(input) },
-      { name: "params", type: this.schema.getType("JSON") }
+      { name: "params", type: this.schema.getType("FindInput") }
     )
 
     field.resolve = (parent, { id, data, params }, context, info) => {
@@ -56,7 +56,7 @@ class Remove extends SchemaDirectiveVisitor {
 
     field.args.push(
       { name: "id", type: this.schema.getType("ID") },
-      { name: "params", type: this.schema.getType("JSON") }
+      { name: "params", type: this.schema.getType("FindInput") }
     )
 
     field.resolve = (parent, { id, params }, context, info) => {
@@ -69,7 +69,7 @@ class Find extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
     const service = this.args.service
 
-    field.args.push({ name: "params", type: this.schema.getType("JSON") })
+    field.args.push({ name: "params", type: this.schema.getType("FindInput") })
 
     field.resolve = (parent, { params }, context, info) => {
       return context.dataSources[service].find(params)
@@ -83,7 +83,7 @@ class Get extends SchemaDirectiveVisitor {
 
     field.args.push(
       { name: "id", type: this.schema.getType("ID") },
-      { name: "params", type: this.schema.getType("JSON") }
+      { name: "params", type: this.schema.getType("FindInput") }
     )
 
     field.resolve = (parent, { id, params }, context, info) => {
@@ -109,6 +109,18 @@ module.exports = ({ typeDefs, schemaDirectives }) => {
     directive @Remove(service: String!) on FIELD_DEFINITION
     directive @Find(service: String!) on FIELD_DEFINITION
     directive @Get(service: String!) on FIELD_DEFINITION
+
+    input PageInput {
+      cursor: ID = "000000000000000000000000"
+      limi: Int = 30
+    }
+
+    input FindInput {
+      query: JSON = {}
+      page: PageInput
+      sort: JSON = {}
+      project: JSON = {}
+    }
 
     type Page {
       total: Int!
