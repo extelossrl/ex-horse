@@ -116,10 +116,10 @@ module.exports = ({ typeDefs, schemaDirectives }) => {
     }
 
     input FindInput {
-      query: JSON = {}
+      query: JSON
       page: PageInput
-      sort: JSON = {}
-      project: JSON = {}
+      sort: JSON
+      project: JSON
     }
 
     type Page {
