@@ -15,7 +15,6 @@ class Task extends DataSource {
   async create({ type, payload }) {
     const task = await this.db.collection(this.collection).insertOne({
       type,
-      procedureId: new ObjectID(),
       state: "CREATED",
       payload,
       progress: [],
