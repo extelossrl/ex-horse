@@ -110,8 +110,10 @@ module.exports = ({ typeDefs, schemaDirectives }) => {
     directive @Find(service: String!) on FIELD_DEFINITION
     directive @Get(service: String!) on FIELD_DEFINITION
 
+    union PageCursorOrNumber = ID | Int
+
     input PageInput {
-      cursor: ID = "000000000000000000000000"
+      cursor: PageCursorOrNumber = "000000000000000000000000"
       limit: Int = 30
     }
 
