@@ -212,16 +212,10 @@ class EventStore extends DataSource {
   async find(params = {}) {
     params.query = params.query || {}
     params.page = params.page || {}
-    params.page.cursor =
-      typeof params.page.cursor === "number"
-        ? Math.max(1, params.page.cursor)
-        : params.page.cursor
-    params.page.cursor =
-      typeof params.page.cursor === "string"
-        ? new ObjectID(params.page.cursor)
-        : params.page.cursor
     params.page.cursor = params.page.cursor || noID
+    params.page.cursor = new ObjectID(params.page.cursor)
     params.page.limit = params.page.limit || 30
+    params.page.skip = params.page.skip || 0
     params.sort = params.sort || {}
     params.project = params.project || {}
 
@@ -359,19 +353,14 @@ class EventStore extends DataSource {
       .findOne({ key: this.snapshotName })
 
     if (meta) {
-      let _id = { $gt: params.page.cursor }
-      let skip = 0
-
-      if (typeof params.page.cursor === "number") {
-        _id = { $exists: true }
-        skip = (params.page.cursor - 1) * params.page.limit
-      }
-
       const data = await this.db
         .collection(this.snapshotName)
-        .find({ _id, ...params.query }, params.project)
+        .find(
+          { _id: { $gt: params.page.cursor }, ...params.query },
+          params.project
+        )
         .sort(params.sort)
-        .skip(skip)
+        .skip(params.page.skip)
         .limit(params.page.limit)
         .toArray()
       const total = await this.db
