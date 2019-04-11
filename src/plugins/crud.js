@@ -112,7 +112,7 @@ module.exports = ({ typeDefs, schemaDirectives }) => {
 
     input PageInput {
       cursor: ID = "000000000000000000000000"
-      limi: Int = 30
+      limit: Int = 30
     }
 
     input FindInput {
