@@ -294,27 +294,27 @@ class EventStore extends DataSource {
       .sort({ timestamp: 1 })
       .toArray()
 
-    const data = events.reduce((data, event) => {
+    let data = snapshot.data
+
+    for (const event of events) {
       switch (event.type) {
         case "CREATE":
-          data = this.$CREATE(data, event)
+          data = await this.$CREATE(data, event)
           break
         case "UPDATE":
-          data = this.$UPDATE(data, event)
+          data = await this.$UPDATE(data, event)
           break
         case "PATCH":
-          data = this.$PATCH(data, event)
+          data = await this.$PATCH(data, event)
           break
         case "REMOVE":
-          data = this.$REMOVE(data, event)
+          data = await this.$REMOVE(data, event)
           break
         default:
-          data = this.$DEFAULT(data, event)
+          data = await this.$DEFAULT(data, event)
           break
       }
-
-      return data
-    }, snapshot.data)
+    }
 
     const latest = {
       eventIds: [...snapshot.eventIds, ...events.map((event) => event._id)],
