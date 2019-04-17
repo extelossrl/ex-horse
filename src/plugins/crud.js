@@ -1,4 +1,6 @@
 const { gql, SchemaDirectiveVisitor } = require("apollo-server")
+const graphqlFields = require("graphql-fields")
+const flatten = require("flat")
 
 class Create extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
@@ -72,6 +74,19 @@ class Find extends SchemaDirectiveVisitor {
     field.args.push({ name: "params", type: this.schema.getType("FindInput") })
 
     field.resolve = (parent, { params }, context, info) => {
+      if (params && params.query && typeof params.query.q === "string") {
+        const term = params.query.q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+        const stdQuery = Object.keys(params.query)
+          .filter((key) => key !== "q")
+          .map((key) => ({ [key]: params.query[key] }))
+        const rgxQuery = Object.keys(
+          flatten((graphqlFields(info) || {}).data || {})
+        ).map((key) => ({ [key]: { $regex: new RegExp(term, "i") } }))
+
+        params.query = { $and: [{ $or: [...rgxQuery] }, ...stdQuery] }
+      }
+
       return context.dataSources[service].find(params)
     }
   }
@@ -116,6 +131,9 @@ module.exports = ({ typeDefs, schemaDirectives }) => {
       skip: Int = 0
     }
 
+    """
+    Use query.q to perform a global search in the requested fields
+    """
     input FindInput {
       query: JSON
       page: PageInput
