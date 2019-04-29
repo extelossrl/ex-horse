@@ -1,4 +1,4 @@
-const { ApolloServer } = require("apollo-server")
+const { ApolloServer } = require("apollo-server-micro")
 const { MongoClient } = require("mongodb")
 const { merge, defaultsDeep } = require("lodash")
 
@@ -92,7 +92,5 @@ module.exports = async function(config = {}) {
     }
   })
 
-  const { url } = await server.listen()
-
-  console.log(`🐴 Server ready at ${url}`)
+  return server.createHandler()
 }

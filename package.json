@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@casl/ability": "^3.0.2",
-    "apollo-server": "^2.4.8",
+    "apollo-server-micro": "^2.4.8",
     "bcrypt": "^3.0.6",
     "cloudinary": "^1.14.0",
     "flat": "^4.1.0",
