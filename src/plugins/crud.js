@@ -113,10 +113,12 @@ class GlobalSearch extends SchemaDirectiveVisitor {
 
     field.resolve = (parent, { query }, context, info) => {
       const queries = Object.keys(context.dataSources)
-        .filter((dataSource) => dataSource.find)
-        .map((dataSource) => dataSource.find({ query: { q: query } }))
+        .filter((dataSource) => context.dataSources[dataSource].find)
+        .map((dataSource) =>
+          context.dataSources[dataSource].find({ query: { q: query } })
+        )
 
-      return queries
+      return Promise.all(queries)
     }
   }
 }
