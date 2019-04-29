@@ -60,8 +60,16 @@ class EventStore extends DataSource {
    * @returns {Array} An accumulator array with a new entry
    * @memberof EventStore
    */
-  $CREATE(data, { aggregateId, payload }) {
-    return [...data, { ...payload, _id: aggregateId }]
+  $CREATE(data, { aggregateId, payload, timestamp }) {
+    return [
+      ...data,
+      {
+        ...payload,
+        _id: aggregateId,
+        _createdAt: timestamp,
+        _updatedAt: timestamp
+      }
+    ]
   }
 
   /**
@@ -72,10 +80,11 @@ class EventStore extends DataSource {
    * @returns {Array} An accumulator array with a replaced entry
    * @memberof EventStore
    */
-  $UPDATE(data, { aggregateId, payload }) {
+  $UPDATE(data, { aggregateId, payload, timestamp }) {
     const target = data.findIndex((entry) => entry._id.equals(aggregateId))
 
     data[target] = payload
+    data[target]._updatedAt = timestamp
 
     return data
   }
@@ -88,7 +97,7 @@ class EventStore extends DataSource {
    * @returns {Array} An accumulator array with a patched entry
    * @memberof EventStore
    */
-  $PATCH(data, { aggregateId, payload }) {
+  $PATCH(data, { aggregateId, payload, timestamp }) {
     const target = data.findIndex((entry) => entry._id.equals(aggregateId))
 
     mergeWith(data[target], payload, (objValue, srcValue) => {
@@ -102,6 +111,8 @@ class EventStore extends DataSource {
 
       return undefined
     })
+
+    data[target]._updatedAt = timestamp
 
     return data
   }
