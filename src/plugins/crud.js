@@ -107,6 +107,20 @@ class Get extends SchemaDirectiveVisitor {
   }
 }
 
+class GlobalSearch extends SchemaDirectiveVisitor {
+  visitFieldDefinition(field) {
+    field.args.push({ name: "query", type: this.schema.getType("String") })
+
+    field.resolve = (parent, { query }, context, info) => {
+      const queries = Object.keys(context.dataSources)
+        .filter((dataSource) => dataSource.find)
+        .map((dataSource) => dataSource.find({ query: { q: query } }))
+
+      return queries
+    }
+  }
+}
+
 module.exports = ({ typeDefs, schemaDirectives }) => {
   typeDefs.push(gql`
     directive @Create(
@@ -124,6 +138,7 @@ module.exports = ({ typeDefs, schemaDirectives }) => {
     directive @Remove(service: String!) on FIELD_DEFINITION
     directive @Find(service: String!) on FIELD_DEFINITION
     directive @Get(service: String!) on FIELD_DEFINITION
+    directive @GlobalSearch on FIELD_DEFINITION
 
     input PageInput {
       cursor: ID = "000000000000000000000000"
@@ -155,4 +170,5 @@ module.exports = ({ typeDefs, schemaDirectives }) => {
   schemaDirectives.Remove = Remove
   schemaDirectives.Find = Find
   schemaDirectives.Get = Get
+  schemaDirectives.GlobalSearch = GlobalSearch
 }
