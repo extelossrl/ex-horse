@@ -53,7 +53,7 @@ You can generate a new service by typing: `npx ex-horse new service myService`
 
 A schema must export a { typeDefs, resolvers } object which will be used to build a [GraphQL Schema](https://graphql.org/learn/schema/). Resolvers should be only used to map functions to the controller, in this way you can call functions across all services without redefining them everywhere:
 ```js
-const { gql } = require("apollo-server");
+const { gql } = require("apollo-server-micro");
 
 const typeDefs = gql`
   extend type Commands {

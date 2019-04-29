@@ -1,4 +1,4 @@
-const { gql, SchemaDirectiveVisitor } = require("apollo-server")
+const { gql, SchemaDirectiveVisitor } = require("apollo-server-micro")
 const graphqlFields = require("graphql-fields")
 const flatten = require("flat")
 

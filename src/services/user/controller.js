@@ -1,5 +1,5 @@
 const EventStore = require("../../libraries/eventstore")
-const { AuthenticationError, UserInputError } = require("apollo-server")
+const { AuthenticationError, UserInputError } = require("apollo-server-micro")
 
 class ServiceController extends EventStore {
   $CREATE(data, { payload, aggregateId }) {

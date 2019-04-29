@@ -1,4 +1,4 @@
-const { gql } = require("apollo-server")
+const { gql } = require("apollo-server-micro")
 const GraphQLToolsTypes = require("graphql-tools-types")
 
 module.exports = ({ typeDefs, resolvers }) => {

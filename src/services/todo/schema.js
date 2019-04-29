@@ -1,4 +1,4 @@
-const { gql } = require("apollo-server")
+const { gql } = require("apollo-server-micro")
 
 const typeDefs = gql`
   input TodoInput {

@@ -1,5 +1,5 @@
 const { DataSource } = require("apollo-datasource")
-const { UserInputError } = require("apollo-server")
+const { UserInputError } = require("apollo-server-micro")
 const { ObjectID } = require("mongodb")
 const { mergeWith, isArray } = require("lodash")
 

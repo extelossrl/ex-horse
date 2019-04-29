@@ -1,6 +1,6 @@
 const { DataSource } = require("apollo-datasource")
 const { ObjectID } = require("mongodb")
-const { UserInputError } = require("apollo-server")
+const { UserInputError } = require("apollo-server-micro")
 
 const noID = new ObjectID("000000000000000000000000")
 

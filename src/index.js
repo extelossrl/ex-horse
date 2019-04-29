@@ -1,4 +1,4 @@
-const { gql } = require("apollo-server")
+const { gql } = require("apollo-server-micro")
 const { AbilityBuilder } = require("@casl/ability")
 const Server = require("./libraries/server")
 const EventStore = require("./libraries/eventstore")

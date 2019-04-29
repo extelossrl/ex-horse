@@ -1,4 +1,4 @@
-const { gql } = require("apollo-server")
+const { gql } = require("apollo-server-micro")
 
 module.exports = ({ typeDefs }) => {
   typeDefs.push(gql`

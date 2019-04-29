@@ -1,4 +1,4 @@
-const { gql, SchemaDirectiveVisitor } = require("apollo-server")
+const { gql, SchemaDirectiveVisitor } = require("apollo-server-micro")
 const { defaultFieldResolver } = require("graphql")
 
 class Acl extends SchemaDirectiveVisitor {
