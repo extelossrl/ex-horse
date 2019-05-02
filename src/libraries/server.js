@@ -25,7 +25,8 @@ module.exports = async function(config = {}) {
       api_secret: "52655b0d175d06660e55"
     },
     plugins: [],
-    services: []
+    services: [],
+    apollo: {}
   }
 
   defaultsDeep(config, defaults)
@@ -89,7 +90,8 @@ module.exports = async function(config = {}) {
       }
 
       return toRet
-    }
+    },
+    ...config.apollo
   })
 
   return server.createHandler()
