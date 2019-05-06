@@ -1,6 +1,7 @@
 const { ApolloServer } = require("apollo-server-micro")
 const { MongoClient } = require("mongodb")
 const { merge, defaultsDeep } = require("lodash")
+const cors = require("micro-cors")()
 
 module.exports = async function(config = {}) {
   const defaults = {
@@ -94,5 +95,5 @@ module.exports = async function(config = {}) {
     ...config.apollo
   })
 
-  return server.createHandler()
+  return cors(server.createHandler())
 }
