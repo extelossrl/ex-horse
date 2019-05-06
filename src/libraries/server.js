@@ -95,5 +95,12 @@ module.exports = async function(config = {}) {
     ...config.apollo
   })
 
-  return cors(server.createHandler())
+  return cors((req, res) => {
+    if (req.method === "OPTIONS") {
+      res.end()
+      return
+    }
+
+    return server.createHandler()(req, res)
+  })
 }
