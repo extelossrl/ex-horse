@@ -12,7 +12,8 @@ module.exports = async function(config = {}) {
         meta: "meta",
         events: "events",
         snapshot: "snapshot",
-        tasks: "tasks"
+        tasks: "tasks",
+        dependencies: "dependencies"
       },
       snapshotTrigger: 1
     },

@@ -2,7 +2,6 @@ const { DataSource } = require("apollo-datasource")
 const { UserInputError } = require("apollo-server-micro")
 const { ObjectID } = require("mongodb")
 const { mergeWith, isArray } = require("lodash")
-const dependencies = require("./dependencies")
 
 const noID = new ObjectID("000000000000000000000000")
 
@@ -433,6 +432,61 @@ class EventStore extends DataSource {
       },
       { upsert: true }
     )
+  }
+
+  async emit(aggregateName, aggregateId, context) {
+    const subscribers = await this.db
+      .collection(this.collections.dependencies)
+      .find({
+        destAggregate: aggregateName,
+        destId: aggregateId
+      })
+      .toArray()
+
+    for (const { sourceId, service, handler } of subscribers) {
+      await context.dataSources[service].commit(handler, sourceId, null)
+    }
+  }
+
+  async subscribe(
+    destAggregate,
+    destId,
+    sourceAggregate,
+    sourceId,
+    service,
+    handler
+  ) {
+    const subscribed = await this.db
+      .collection(this.collections.dependencies)
+      .get({
+        destAggregate,
+        destId,
+        sourceAggregate,
+        sourceId,
+        service,
+        handler
+      })
+
+    if (subscribed) {
+      return
+    }
+
+    const subscription = await this.db
+      .collection(this.collections.dependencies)
+      .create({
+        destAggregate,
+        destId,
+        sourceAggregate,
+        sourceId,
+        service,
+        handler
+      })
+
+    return subscription._id
+  }
+
+  unsubscribe(_id) {
+    return this.db.collection(this.collections.dependencies).remove({ _id })
   }
 }
 
