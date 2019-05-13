@@ -456,31 +456,27 @@ class EventStore extends DataSource {
     service,
     handler
   ) {
-    const subscribed = await this.db
-      .collection(this.collections.dependencies)
-      .get({
-        destAggregate,
-        destId,
-        sourceAggregate,
-        sourceId,
-        service,
-        handler
-      })
-
-    if (subscribed) {
-      return
-    }
-
     const subscription = await this.db
       .collection(this.collections.dependencies)
-      .create({
-        destAggregate,
-        destId,
-        sourceAggregate,
-        sourceId,
-        service,
-        handler
-      })
+      .update(
+        {
+          destAggregate,
+          destId,
+          sourceAggregate,
+          sourceId,
+          service,
+          handler
+        },
+        {
+          destAggregate,
+          destId,
+          sourceAggregate,
+          sourceId,
+          service,
+          handler
+        },
+        { upsert: true }
+      )
 
     return subscription._id
   }
