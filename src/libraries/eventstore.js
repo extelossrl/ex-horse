@@ -2,6 +2,7 @@ const { DataSource } = require("apollo-datasource")
 const { UserInputError } = require("apollo-server-micro")
 const { ObjectID } = require("mongodb")
 const { mergeWith, isArray } = require("lodash")
+const dependencies = require("./dependencies")
 
 const noID = new ObjectID("000000000000000000000000")
 
@@ -61,6 +62,8 @@ class EventStore extends DataSource {
    * @memberof EventStore
    */
   $CREATE(data, { aggregateId, payload, timestamp }) {
+    dependencies.emit(this.aggregateName, aggregateId, this.context)
+
     return [
       ...data,
       {
@@ -85,6 +88,8 @@ class EventStore extends DataSource {
 
     data[target] = payload
     data[target]._updatedAt = timestamp
+
+    dependencies.emit(this.aggregateName, aggregateId, this.context)
 
     return data
   }
@@ -114,6 +119,8 @@ class EventStore extends DataSource {
 
     data[target]._updatedAt = timestamp
 
+    dependencies.emit(this.aggregateName, aggregateId, this.context)
+
     return data
   }
 
@@ -126,6 +133,8 @@ class EventStore extends DataSource {
    * @memberof EventStore
    */
   $REMOVE(data, { aggregateId }) {
+    dependencies.emit(this.aggregateName, aggregateId, this.context)
+
     return data.filter((entry) => !entry._id.equals(aggregateId))
   }
 
