@@ -61,7 +61,7 @@ class EventStore extends DataSource {
    * @memberof EventStore
    */
   $CREATE(data, { aggregateId, payload, timestamp }) {
-    dependencies.emit(this.aggregateName, aggregateId, this.context)
+    this.emit(this.aggregateName, aggregateId, this.context)
 
     return [
       ...data,
@@ -88,7 +88,7 @@ class EventStore extends DataSource {
     data[target] = payload
     data[target]._updatedAt = timestamp
 
-    dependencies.emit(this.aggregateName, aggregateId, this.context)
+    this.emit(this.aggregateName, aggregateId, this.context)
 
     return data
   }
@@ -118,7 +118,7 @@ class EventStore extends DataSource {
 
     data[target]._updatedAt = timestamp
 
-    dependencies.emit(this.aggregateName, aggregateId, this.context)
+    this.emit(this.aggregateName, aggregateId, this.context)
 
     return data
   }
@@ -132,7 +132,7 @@ class EventStore extends DataSource {
    * @memberof EventStore
    */
   $REMOVE(data, { aggregateId }) {
-    dependencies.emit(this.aggregateName, aggregateId, this.context)
+    this.emit(this.aggregateName, aggregateId, this.context)
 
     return data.filter((entry) => !entry._id.equals(aggregateId))
   }
