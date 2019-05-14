@@ -2,11 +2,6 @@ const { gql, SchemaDirectiveVisitor } = require("apollo-server-micro")
 const { defaultFieldResolver } = require("graphql")
 
 class Acl extends SchemaDirectiveVisitor {
-  constructor(...args) {
-    super(...args)
-    this.abilities = {}
-  }
-
   visitObject(type) {
     this.ensureFieldsWrapped(type)
 
@@ -33,28 +28,34 @@ class Acl extends SchemaDirectiveVisitor {
       const field = fields[fieldName]
       const { resolve = defaultFieldResolver } = field
 
-      field.resolve = (...args) => {
+      field.resolve = (...params) => {
+        const [obj, args, context, info] = params
+
         const aclAction = field._aclAction || objectType._aclAction
         const aclSubject = field._aclSubject || objectType._aclSubject
 
         if (!aclAction || !aclSubject) {
-          return resolve.apply(this, args)
+          return resolve.apply(this, params)
         }
 
-        const userRole = args[2].user.role
+        const userRole = params[2].user.role
 
-        this.abilities[userRole].throwUnlessCan(aclAction, aclSubject)
+        context.acl[userRole].throwUnlessCan(aclAction, aclSubject)
 
-        return resolve.apply(this, args)
+        return resolve.apply(this, params)
       }
     })
   }
 }
 
-module.exports = ({ typeDefs, schemaDirectives }) => {
+module.exports = ({ typeDefs, schemaDirectives, context, config }) => {
   typeDefs.push(gql`
     directive @Acl(action: String!, subject: String!) on FIELD_DEFINITION
   `)
 
   schemaDirectives.Acl = Acl
+
+  context.push(async ({ req, res, connection }) => ({
+    acl: config.acl
+  }))
 }
