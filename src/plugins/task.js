@@ -12,14 +12,27 @@ class Task extends DataSource {
     this.collection = config
   }
 
-  async create({ type, payload }) {
+  async create({
+    domain,
+    type,
+    title,
+    description,
+    userId,
+    direction,
+    payload
+  }) {
     const task = await this.db.collection(this.collection).insertOne({
-      type,
-      state: "CREATED",
+      domain,
+      output: [],
       payload,
       progress: [],
-      output: "",
-      timestamp: new Date()
+      state: "Created",
+      timestamp: new Date(),
+      type,
+      title,
+      description,
+      userId,
+      direction
     })
 
     return task.ops[0]
