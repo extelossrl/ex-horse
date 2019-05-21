@@ -1,6 +1,7 @@
 const { gql, SchemaDirectiveVisitor } = require("apollo-server-micro")
 const graphqlFields = require("graphql-fields")
 const flatten = require("flat")
+const traverse = require("traverse")
 
 class Create extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
@@ -74,7 +75,19 @@ class Find extends SchemaDirectiveVisitor {
     field.args.push({ name: "params", type: this.schema.getType("FindInput") })
 
     field.resolve = (parent, { params }, context, info) => {
-      if (params && params.query && typeof params.query.q === "string") {
+      params = params || {}
+      params.query = params.query || {}
+
+      traverse(params.query).forEach(function(value) {
+        if (this.key === "$date" && this.isLeaf && this.parent) {
+          const stringDate = new Date(value).getTime()
+          const numberDate = new Date(parseInt(value)).getTime()
+
+          this.parent.update(new Date(stringDate || numberDate))
+        }
+      })
+
+      if (typeof params.query.q === "string") {
         const term = params.query.q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
         const stdQuery = Object.keys(params.query)
