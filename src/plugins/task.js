@@ -23,7 +23,7 @@ class Task extends DataSource {
       payload,
       progress: [],
       state: "Created",
-      timestamp: new Date(),
+      timestamp: new Date().getTime().toString(),
       type,
       title,
       description,
