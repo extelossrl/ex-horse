@@ -19,7 +19,7 @@ class Task extends DataSource {
   async create({ domain, type, title, description, direction, payload }) {
     const task = await this.db.collection(this.collection).insertOne({
       domain,
-      output: [],
+      output: "",
       payload,
       progress: [],
       state: "Created",
