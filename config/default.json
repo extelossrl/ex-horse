@@ -1,0 +1,8 @@
+{
+  "db": "mongodb+srv://carmhack:drano@cluster0-jndlt.mongodb.net/ex-horse?retryWrites=true",
+  "authentication": {
+    "salt": 10,
+    "secret": "carmhack",
+    "tokenDuration": "1d"
+  }
+}

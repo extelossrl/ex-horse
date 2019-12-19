@@ -1,0 +1,16 @@
+overwrite: true
+schema: "http://localhost:3000/graphql"
+documents: null
+generates:
+  src/generated/graphql.ts:
+    config:
+      contextType: ../types#ExHorseContext
+      scalars:
+        DateTime: Date
+    plugins:
+      - "typescript"
+      - "typescript-resolvers"
+  #     - "typescript-mongodb"
+  # ./graphql.schema.json:
+  #   plugins:
+  #     - "introspection"
