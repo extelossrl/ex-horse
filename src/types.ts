@@ -69,6 +69,15 @@ export interface GetParams {
   query?: FindParams
 }
 
+export enum DatabaseMethod {
+  "create" = "create",
+  "update" = "update",
+  "patch" = "patch",
+  "remove" = "remove",
+  "find" = "find",
+  "get" = "ge"
+}
+
 export interface DatabaseAdapter<T extends Document> {
   create(data: DocumentData<T>, params?: CreateParams): Promise<T>
 

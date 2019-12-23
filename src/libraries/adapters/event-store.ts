@@ -9,7 +9,8 @@ import {
   RemoveParams,
   FindParams,
   GetParams,
-  Page
+  Page,
+  DatabaseMethod
 } from "../../types"
 
 import { ObjectId, Db } from "mongodb"
@@ -18,46 +19,44 @@ import { MongoDbDocumentData, MongoDbDocument } from "./mongodb"
 
 export type ReadModel = string
 
-export enum EventMethod {
-  "create" = "create",
-  "update" = "update",
-  "patch" = "patch",
-  "remove" = "remove"
-}
-
 export interface EventData<T> {
   _id: ObjectId
-  collection: string
-  id: ObjectId
-  method: EventMethod
-  data: MongoDbDocumentData<T>
+  aggregateName: Collection
+  aggregateId: ObjectId
+  readModel: ReadModel
+  command: DatabaseMethod
+  payload: MongoDbDocumentData<T>
   createdAt: Date
 }
 
 export interface Snapshot {
-  collection: Collection
-  model: ReadModel
+  aggregateName: Collection
+  readModel: ReadModel
   lastEventId: ObjectId
   createdAt: Date
 }
 
+export type DependecyCallback = (event: EventData<any>) => Promise<void>
+
 export default class EventStoreAdapter<T extends Document>
   implements DatabaseAdapter<T> {
   private snapshot: string
+  private dependencies: Set<Collection> = new Set()
+  private dependecyCallback: DependecyCallback | null = null
 
   constructor(
     private db: Db,
-    private collection: Collection,
-    private model: ReadModel = "default"
+    private aggregateName: Collection,
+    private readModel: ReadModel = "default"
   ) {
-    this.snapshot = `snapshot.${collection}.${model}`
+    this.snapshot = `snapshot.${aggregateName}.${readModel}`
   }
 
   async create(
     data: MongoDbDocumentData<T>,
     params?: CreateParams
   ): Promise<T> {
-    const id = await this.pushEvent(EventMethod.create, "", data)
+    const id = await this.pushEvent(DatabaseMethod.create, "", data)
 
     return this.get(id)
   }
@@ -67,7 +66,7 @@ export default class EventStoreAdapter<T extends Document>
     data: MongoDbDocumentData<T>,
     params?: UpdateParams
   ): Promise<T> {
-    await this.pushEvent(EventMethod.update, id, data)
+    await this.pushEvent(DatabaseMethod.update, id, data)
 
     return this.get(id)
   }
@@ -77,7 +76,7 @@ export default class EventStoreAdapter<T extends Document>
     data: MongoDbDocumentData<T>,
     params?: PatchParams
   ): Promise<T> {
-    await this.pushEvent(EventMethod.patch, id, data)
+    await this.pushEvent(DatabaseMethod.patch, id, data)
 
     return this.get(id)
   }
@@ -85,7 +84,7 @@ export default class EventStoreAdapter<T extends Document>
   async remove(id: ID, params?: RemoveParams): Promise<T> {
     const oldDoc = await this.get(id)
 
-    await this.pushEvent(EventMethod.remove, id)
+    await this.pushEvent(DatabaseMethod.remove, id)
 
     return oldDoc
   }
@@ -112,7 +111,7 @@ export default class EventStoreAdapter<T extends Document>
       .then((_) => _.map((_) => this.parseOutput(_)))
 
     const total = await this.db
-      .collection(this.collection)
+      .collection(this.aggregateName)
       .countDocuments(filter)
 
     return {
@@ -143,30 +142,41 @@ export default class EventStoreAdapter<T extends Document>
   }
 
   private async pushEvent(
-    method: EventMethod,
+    command: DatabaseMethod,
     id: ID,
-    data?: MongoDbDocumentData<T>
+    payload?: MongoDbDocumentData<T>
   ): Promise<ID> {
-    const eventId = new ObjectId(id || undefined)
+    const aggregateId = new ObjectId(id || undefined)
 
     await this.db.collection("events").insertOne(
       {
-        collection: this.collection,
-        id: eventId,
-        method,
-        data: data || {},
+        aggregateName: this.aggregateName,
+        aggregateId: new ObjectId(id || undefined),
+        readModel: this.readModel,
+        command,
+        payload: (payload || {}) as any,
         createdAt: new Date()
       },
       {}
     )
 
-    return eventId.toHexString()
+    return aggregateId.toHexString()
   }
 
   private async hydrate(): Promise<void> {
+    if (this.dependencies.size > 0) {
+      await this.resolveDependecies()
+    }
+
     const snapshot: Snapshot | null = await this.db
       .collection("snapshots")
-      .findOne({ collection: this.collection, model: this.model }, {})
+      .findOne(
+        {
+          aggregateName: this.aggregateName,
+          readModel: this.readModel
+        },
+        {}
+      )
 
     const lastEventId = snapshot?.lastEventId
     const cursor = lastEventId ? { _id: { $gt: lastEventId } } : {}
@@ -175,7 +185,8 @@ export default class EventStoreAdapter<T extends Document>
       .collection("events")
       .find(
         {
-          collection: this.collection,
+          aggregateName: this.aggregateName,
+          readModel: this.readModel,
           ...cursor
         },
         {}
@@ -184,23 +195,27 @@ export default class EventStoreAdapter<T extends Document>
       .toArray()
 
     for (const event of events) {
-      if (event.method === EventMethod.create) {
+      if (event.command === DatabaseMethod.create) {
         await this.onCreate(event)
-      } else if (event.method === EventMethod.update) {
+      } else if (event.command === DatabaseMethod.update) {
         await this.onUpdate(event)
-      } else if (event.method === EventMethod.patch) {
+      } else if (event.command === DatabaseMethod.patch) {
         await this.onPatch(event)
-      } else if (event.method === EventMethod.remove) {
+      } else if (event.command === DatabaseMethod.remove) {
         await this.onRemove(event)
+      }
+
+      if (this.dependecyCallback) {
+        this.dependecyCallback(event)
       }
     }
 
     if (events.length > 0) {
       await this.db.collection("snapshots").replaceOne(
-        { collection: this.collection, model: this.model },
+        { aggregateName: this.aggregateName, readModel: this.readModel },
         {
-          collection: this.collection,
-          model: this.model,
+          aggregateName: this.aggregateName,
+          readModel: this.readModel,
           lastEventId: events[events.length - 1]._id,
           createdAt: new Date()
         },
@@ -212,8 +227,8 @@ export default class EventStoreAdapter<T extends Document>
   private async onCreate(event: EventData<T>): Promise<void> {
     await this.db.collection(this.snapshot).insertOne(
       {
-        ...event.data,
-        _id: event.id,
+        ...event.payload,
+        _id: event.aggregateId,
         createdAt: event.createdAt,
         updatedAt: event.createdAt
       },
@@ -223,9 +238,9 @@ export default class EventStoreAdapter<T extends Document>
 
   private async onUpdate(event: EventData<T>): Promise<void> {
     await this.db.collection(this.snapshot).findOneAndReplace(
-      { _id: event.id },
+      { _id: event.aggregateId },
       {
-        ...event.data,
+        ...event.payload,
         updatedAt: event.createdAt
       },
       { returnOriginal: false }
@@ -234,10 +249,10 @@ export default class EventStoreAdapter<T extends Document>
 
   private async onPatch(event: EventData<T>): Promise<void> {
     await this.db.collection(this.snapshot).findOneAndUpdate(
-      { _id: event.id },
+      { _id: event.aggregateId },
       {
         $set: {
-          ...event.data,
+          ...event.payload,
           updatedAt: event.createdAt
         }
       },
@@ -248,12 +263,30 @@ export default class EventStoreAdapter<T extends Document>
   private async onRemove(event: EventData<T>): Promise<void> {
     await this.db
       .collection(this.snapshot)
-      .findOneAndDelete({ _id: event.id }, {})
+      .findOneAndDelete({ _id: event.aggregateId }, {})
   }
 
   private parseOutput(response: MongoDbDocument): T {
     const { _id, createdAt, updatedAt, ...docData } = response
 
     return { id: _id.toHexString(), createdAt, updatedAt, ...docData } as T
+  }
+
+  registerDependency(aggregateName: Collection): void {
+    this.dependencies.add(aggregateName)
+  }
+
+  async onDependencyEvent(event: EventData<any>): Promise<void> {
+    throw new Error("Not implemented")
+  }
+
+  private async resolveDependecies(): Promise<void> {
+    for (const dependency of this.dependencies) {
+      const wrapper = new EventStoreAdapter(this.db, dependency, "default")
+
+      wrapper.dependecyCallback = this.onDependencyEvent
+
+      await wrapper.hydrate()
+    }
   }
 }
