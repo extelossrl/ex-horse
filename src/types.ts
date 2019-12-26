@@ -1,9 +1,10 @@
 import { EventBus } from "./libraries/event-bus"
-import { Response, Request } from "node-fetch"
+import { GetCookieFn, SetCookieFn } from "./libraries/cookies"
+import { IncomingMessage, ServerResponse } from "http"
 
 export interface ExHorseContext {
-  req: Request
-  res: Response
+  req: IncomingMessage & { cookie: GetCookieFn }
+  res: ServerResponse & { cookie: SetCookieFn }
   services: Services
   events: EventBus
   user: User

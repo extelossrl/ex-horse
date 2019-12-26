@@ -9,6 +9,7 @@ import BaseService from "./services/application/schema"
 import UserService from "./services/users/schema"
 import UsersServiceController from "./services/users/controller"
 import { EventBus } from "./libraries/event-bus"
+import { getCookie, setCookie } from "./libraries/cookies"
 
 const mongodb = new Promise(async (resolve, reject) => {
   const client = new MongoClient(config.get("db"), {
@@ -24,6 +25,9 @@ const apolloServer = new ApolloServer({
   async context({ req, res }): Promise<any> {
     const db = await mongodb
     const ctx: any = {}
+
+    req.cookie = getCookie(req)
+    res.cookie = setCookie(res)
 
     ctx.req = req
     ctx.res = res

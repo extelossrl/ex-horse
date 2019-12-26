@@ -50,6 +50,12 @@ export default class UsersServiceController extends ServiceController<User> {
       }
     )
 
+    // this.context.res.cookie("jwt", token, {
+    //   httpOnly: true,
+    //   secure: !!process.env.NODE_ENV,
+    //   expires: new Date(((jwt.decode(token) || {}) as any).exp * 1000)
+    // })
+
     return token
   }
 
